@@ -5,8 +5,9 @@ Shared `CLAUDE.md` engineering guidance for Kotlin projects.
 ## Install
 
 ```
-git clone https://github.com/l3r8yJ/my-claude.git ~/code/oss/my-claude
-~/code/oss/my-claude/install.sh
+git clone https://github.com/l3r8yJ/my-claude.git
+cd my-claude
+./install.sh
 ```
 
 This symlinks `CLAUDE.md` into `~/.claude/CLAUDE.md` and adds a Claude Code

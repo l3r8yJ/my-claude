@@ -7,6 +7,12 @@ IMPORTANT:
 - Preserve the existing project style unless there is a clear reason to change it.
 - Do not mention Claude, Anthropic, or any AI tool in commit messages, PR descriptions, or code comments — no `Co-Authored-By: Claude`, no "Generated with Claude Code", no similar attribution.
 
+## Commit message format
+
+- Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#specification) for every commit message.
+- Use the ticket name as the scope, e.g. `feat(PROJ-123): add retry to payment client`.
+- If the ticket name isn't already known from context, ask for it before committing — do not guess or omit the scope.
+
 ## General engineering defaults
 
 - Prefer simple, readable, and maintainable Kotlin code.

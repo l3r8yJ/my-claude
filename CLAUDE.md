@@ -42,6 +42,7 @@ IMPORTANT:
 - **Collections:** prefer standard-library operators (`map`, `filter`, `associateBy`, `groupBy`, `partition`, `fold`, `sumOf`, `mapNotNull`, `flatMap`, `single`/`singleOrNull`) over manual mutable-accumulator loops. Prefer `buildList { }` / `buildMap { }` / `buildSet { }` over declaring a `mutableListOf()` and returning it. Reach for `asSequence()` only when chaining multiple operators over a genuinely large collection to avoid intermediate allocations — unnecessary for small/typical collections.
 - **Null-safety:** prefer safe calls (`?.`), the Elvis operator (`?:`), and smart-casts over `!!`; reserve `!!` for cases where nullability is already proven impossible.
 - **Data classes:** prefer `.copy()` over manually reconstructing an object field-by-field.
+- **Multi-input conversions:** for a Spring `Converter` that needs more than one input, prefer a generic `Source<S, A>` pair type (`data class Source<S, A>(val source: S, val addition: A)`) built via an `infix fun <S, A> S.with(addition: A): Source<S, A>` over a one-off `XxxEntitySource` data class per converter. Pair it with a reified `ConversionService.convertNotNull<Source, Target>(source): Target` extension (`convert(source, Target::class.java) ?: error(...)`) instead of `convert(...)!!` or a hand-rolled `convertOrThrow`.
 
 ## Function body style
 

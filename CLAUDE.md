@@ -86,6 +86,7 @@ IMPORTANT:
 - Do not use H2 as a substitute for PostgreSQL unless explicitly requested.
 - Prefer realistic integration tests over overly mocked tests.
 - Prefer integration tests for Spring Boot services when validating repository, messaging, and configuration flows, when practical.
+- Prefer black-box tests: drive the service through its real entry point (HTTP/GraphQL request, consumed Kafka message, etc.) and assert on the observable outcome — the response, the resulting DB rows, published events, or app state change — rather than reaching into internals or asserting on mocks. Test behavior at the boundary, not implementation.
 - Mock only genuinely external resources you don't control (third-party REST/HTTP responses, external services, clocks/randomness). Never mock what you can exercise for real — if the scenario can be set up by putting data in the DB (Testcontainers) and running the actual code path, do that instead of mocking. A mock that stands in for your own DB, repository, or business logic hides the bug you were trying to catch.
 - Prefer fake-objects approach for shared test setup; see the `kotlin-test-writing-rules` skill for the full jtcop rule set (assertion style, naming, ITCase layout).
 - Prefer JUnit 5 API like argument providers and custom extensions to provide data for tests.

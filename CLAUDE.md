@@ -48,7 +48,7 @@ IMPORTANT:
 - **Null-safety:** prefer safe calls (`?.`), the Elvis operator (`?:`), and smart-casts over `!!`; reserve `!!` for cases where nullability is already proven impossible.
 - **Data classes:** prefer `.copy()` over manually reconstructing an object field-by-field.
 - **Multi-input conversions:** for a Spring `Converter` that needs more than one input, prefer a generic `Source<S, A>` pair type over a one-off `XxxEntitySource` data class per converter. See the `mapstruct-converter-conventions` skill for the full pattern (naming, shared `@MapperConfig`, `Source<S, A>`/`convertNotNull` examples).
-- **Control flow:** prefer guard conditions in `when` (`is Order.Paid if order.amount > 0 -> ...`, stable Kotlin 2.1+) over a nested `if` inside the branch.
+- **Control flow:** prefer guard conditions in `when` (`is Order.Paid if order.amount > 0 -> ...`, preview in Kotlin 2.1, stable in 2.2+) over a nested `if` inside the branch.
 - **Sealed hierarchies:** prefer `sealed interface` over `sealed class` unless the base genuinely needs shared state or behavior; always rely on an exhaustive `when` (no `else`) over a sealed type so a new subtype fails the build instead of silently falling through.
 - **Domain errors:** `Result` is for generic/infrastructure failures, not domain modeling — model expected domain failures with a sealed class/interface, and reserve exceptions/`Result` for truly exceptional cases.
 - **Domain primitives:** consider `@JvmInline value class UserId(val value: UUID)` for zero-cost type-safe wrappers; note it still boxes when used as a generic type argument, through an interface, or in a collection, so it is not unconditionally free.

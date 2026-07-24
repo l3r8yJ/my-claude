@@ -1,11 +1,12 @@
 # my-claude
 
-Shared `CLAUDE.md` engineering guidance for Kotlin projects, plus two global
+Shared `CLAUDE.md` engineering guidance for Kotlin projects, plus global
 skills for guidance that's too narrow or example-heavy to keep loaded every
 session:
 
 - `skills/kotlin-test-writing-rules` — jtcop rule conventions for JUnit5 test classes
 - `skills/mapstruct-converter-conventions` — Spring `Converter`/MapStruct/`ConversionService` conventions
+- `skills/nextbi-analytics-contracts` — working in the NextBI analytics contracts repo (OpenAPI/Kafka contract-first, codegen, versioning)
 
 ## Install
 

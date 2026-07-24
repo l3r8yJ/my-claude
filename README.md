@@ -1,6 +1,11 @@
 # my-claude
 
-Shared `CLAUDE.md` engineering guidance for Kotlin projects.
+Shared `CLAUDE.md` engineering guidance for Kotlin projects, plus two global
+skills for guidance that's too narrow or example-heavy to keep loaded every
+session:
+
+- `skills/kotlin-test-writing-rules` — jtcop rule conventions for JUnit5 test classes
+- `skills/mapstruct-converter-conventions` — Spring `Converter`/MapStruct/`ConversionService` conventions
 
 ## Install
 
@@ -10,9 +15,11 @@ cd my-claude
 ./install.sh
 ```
 
-This symlinks `CLAUDE.md` into `~/.claude/CLAUDE.md` and adds a Claude Code
+This symlinks `CLAUDE.md` into `~/.claude/CLAUDE.md`, symlinks each skill
+under `skills/` into `~/.claude/skills/`, and adds a Claude Code
 `SessionStart` hook that runs `git pull --ff-only` in this repo before each
 session, so you always get the latest guidance automatically. Safe to
-re-run; it won't duplicate the hook or clobber an existing `CLAUDE.md`
-(it backs up any existing real file to a timestamped `CLAUDE.md.bak.<timestamp>` first — your
-old guidance won't be read by Claude Code anymore once symlinked, but nothing is deleted).
+re-run; it won't duplicate the hook or clobber existing files
+(it backs up any existing real `CLAUDE.md` or skill directory to a
+timestamped `.bak.<timestamp>` first — your old guidance won't be read by
+Claude Code anymore once symlinked, but nothing is deleted).

@@ -57,6 +57,7 @@ IMPORTANT:
 
 - Function bodies must not contain blank lines or inline comments.
 - All explanatory context — purpose, assumptions, edge cases, why — belongs in the KDoc/Javadoc block above the function signature, not inside the body.
+- Keep KDoc/Javadoc terse and factual — state what the function does, its params, returns, and throws; no prose no one will read. If a line doesn't help a caller, cut it.
 
 ## Naming and API design
 

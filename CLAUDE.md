@@ -86,7 +86,7 @@ IMPORTANT:
 - Do not use H2 as a substitute for PostgreSQL unless explicitly requested.
 - Prefer realistic integration tests over overly mocked tests.
 - Prefer integration tests for Spring Boot services when validating repository, messaging, and configuration flows, when practical.
-- Mock external boundaries, not core business logic, unless there is a strong reason.
+- Mock only genuinely external resources you don't control (third-party REST/HTTP responses, external services, clocks/randomness). Never mock what you can exercise for real — if the scenario can be set up by putting data in the DB (Testcontainers) and running the actual code path, do that instead of mocking. A mock that stands in for your own DB, repository, or business logic hides the bug you were trying to catch.
 - Prefer fake-objects approach for shared test setup; see the `kotlin-test-writing-rules` skill for the full jtcop rule set (assertion style, naming, ITCase layout).
 - Prefer JUnit 5 API like argument providers and custom extensions to provide data for tests.
 - Always give assertions a descriptive `name` argument with the actual/expected values, so failures are clear without re-running the test.

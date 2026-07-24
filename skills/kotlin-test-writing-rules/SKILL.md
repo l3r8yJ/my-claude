@@ -256,6 +256,45 @@ src/
 
 ---
 
+## Testing Infrastructure Notes
+
+These apply when a test class talks to a real backing service (DB, Kafka) via Testcontainers, or when tuning test execution. They are not jtcop rules — they are operational conventions that keep integration tests fast and non-flaky.
+
+### Testcontainers: singleton / reuse, not per-class
+
+`@Testcontainers` + `@Container` stops and restarts the container **per test class**, even though Spring caches the application context across classes. That mismatch leaves the context pointing at a dead container and produces stale-connection failures. Start the container **once** from a shared base class (static initializer) instead, and register it with `@ServiceConnection`:
+
+```kotlin
+// src/test/kotlin/foo/it/AbstractPostgresITCase.kt
+abstract class AbstractPostgresITCase {
+    companion object {
+        @JvmStatic
+        @ServiceConnection
+        val postgres = PostgreSQLContainer("postgres:16").withReuse(true).apply { start() }
+    }
+}
+```
+
+For fast local/CI runs, also set `testcontainers.reuse.enable=true` (in `~/.testcontainers.properties`) so the container survives between runs. `.withReuse(true)` alone is ignored unless that flag is on.
+
+### JUnit 5 parallel execution (opt-in)
+
+`junit.jupiter.execution.parallel.enabled=true` alone does nothing — it also needs a mode and a strategy:
+
+```
+junit.jupiter.execution.parallel.enabled = true
+junit.jupiter.execution.parallel.mode.default = concurrent
+junit.jupiter.execution.parallel.config.strategy = dynamic
+```
+
+Opt in per module, not globally. Parallel tests sharing a singleton Testcontainer or other mutable state will interfere — only enable it where tests are genuinely isolated.
+
+### Konsist (optional structural enforcement)
+
+To enforce the structural rules above (test classes contain only `@Test` methods, naming conventions, package layout) as a build check, prefer [Konsist](https://docs.konsist.lemonappdev.com/) — it reads the Kotlin AST, so it catches extension functions, top-level functions, and other Kotlin constructs that ArchUnit's bytecode approach misses.
+
+---
+
 ## Quick Reference
 
 | Rule                           | Requirement                                                  |

@@ -46,15 +46,74 @@ the `rules/` mechanism, so the guidance is not loaded twice.
 
 ## Uninstall
 
+There is no uninstall script — run these steps by hand, in this order. Set
+`REPO` to the path of your clone first:
+
 ```
-./remove.sh
+REPO=/path/to/your/clone/of/my-claude
 ```
 
-Removes the rule link, the skill links, the import line if one was added, and
-this repo's `SessionStart` hook. If an earlier install left a legacy
-`~/.claude/CLAUDE.md` symlink pointing into this repo, that is removed too.
-Anything it did not create is left untouched. It does not delete the clone
-itself — `rm -rf` this directory afterwards if you want it gone.
+1. Remove the rule symlink, but only if it still points into this clone:
+
+   ```
+   [ "$(readlink ~/.claude/rules/kotlin-spring.md 2>/dev/null)" = "$REPO/CLAUDE.md" ] && rm ~/.claude/rules/kotlin-spring.md
+   ```
+
+2. Remove the skill symlinks under `~/.claude/skills/`:
+
+   ```
+   for skill_src in "$REPO"/skills/*/; do
+     name="$(basename "$skill_src")"
+     dst="$HOME/.claude/skills/$name"
+     [ "$(readlink "$dst" 2>/dev/null)" = "$REPO/skills/$name" ] && rm "$dst"
+   done
+   ```
+
+3. If the symlink fallback wasn't available and install appended an import
+   line to `~/.claude/CLAUDE.md` instead, strip just that line:
+
+   ```
+   if [ -f ~/.claude/CLAUDE.md ] && [ ! -L ~/.claude/CLAUDE.md ]; then
+     grep -vxF "@$REPO/CLAUDE.md" ~/.claude/CLAUDE.md > /tmp/claude-md.tmp
+     mv /tmp/claude-md.tmp ~/.claude/CLAUDE.md
+   fi
+   ```
+
+4. If an older install left `~/.claude/CLAUDE.md` itself as a symlink into
+   this repo, remove it:
+
+   ```
+   [ "$(readlink ~/.claude/CLAUDE.md 2>/dev/null)" = "$REPO/CLAUDE.md" ] && rm ~/.claude/CLAUDE.md
+   ```
+
+5. Drop this repo's `SessionStart` entry from `~/.claude/settings.json`. This
+   matches on the same anchored string the installer itself uses
+   (`contains($repo + "\"")`, not `contains($repo)`), so a sibling clone
+   whose path happens to share a prefix with yours is left alone:
+
+   ```
+   jq --arg repo "$REPO" '
+     if (.hooks.SessionStart | type) == "array" then
+       .hooks.SessionStart |= (
+         map(.hooks |= map(select(((.command // "") | contains($repo + "\"")) | not)))
+         | map(select((.hooks | length) > 0))
+       )
+     else . end
+     | if (.hooks.SessionStart? // []) == [] then del(.hooks.SessionStart) else . end
+     | if (.hooks? // {}) == {} then del(.hooks) else . end
+   ' ~/.claude/settings.json > /tmp/settings.tmp && mv /tmp/settings.tmp ~/.claude/settings.json
+   ```
+
+6. Finally, delete the clone itself:
+
+   ```
+   rm -rf "$REPO"
+   ```
+
+Anything you did not get from this repo — your own `~/.claude/CLAUDE.md`
+content, your own skills, other tools' `SessionStart` hooks — is untouched by
+these steps as long as you follow the guards (`readlink` checks, the
+anchored `jq` match) as written above.
 
 ## Tests
 
@@ -62,5 +121,5 @@ itself — `rm -rf` this directory afterwards if you want it gone.
 bash tests/run.sh
 ```
 
-Runs `install.sh` and `remove.sh` against throwaway `HOME` directories and
-asserts the resulting state. Exits non-zero if any check fails.
+Runs `install.sh` against throwaway `HOME` directories and asserts the
+resulting state. Exits non-zero if any check fails.

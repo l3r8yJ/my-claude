@@ -86,11 +86,16 @@ if [ ! -e "${SETTINGS}" ]; then
   echo '{}' > "${SETTINGS}"
 fi
 
+session_start_type="$(jq -r '.hooks.SessionStart | type' "${SETTINGS}" 2> /dev/null)" || session_start_type=""
+if [ "${session_start_type}" != "" ] && [ "${session_start_type}" != "array" ] && [ "${session_start_type}" != "null" ]; then
+  echo "error: ${SETTINGS} has .hooks.SessionStart set to type \"${session_start_type}\", not an array — symlinks and skills above are already in place, but nothing in ${SETTINGS} was modified. Fix that key and re-run to wire the hook." >&2
+  exit 1
+fi
+
 tmp="$(mktemp "${SETTINGS}.XXXXXX")"
 if ! jq --arg repo "${REPO_DIR}" --arg cmd "${PULL_CMD}" '
   .hooks //= {} |
   .hooks.SessionStart //= [] |
-  .hooks.SessionStart |= (if type == "array" then . else [] end) |
   .hooks.SessionStart |= (
     map(.hooks |= map(select(((.command // "") | contains($repo + "\"")) | not)))
     | map(select((.hooks | length) > 0))

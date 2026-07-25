@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Runs install.sh / remove.sh against throwaway HOME directories and asserts
-# the resulting state. No framework: prints PASS/FAIL per check, exits 1 if
-# any check failed.
+# Runs install.sh against throwaway HOME directories and asserts the
+# resulting state. No framework: prints PASS/FAIL per check, exits 1 if any
+# check failed.
 set -uo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -61,10 +61,6 @@ fake_home() {
 
 run_install() {
   HOME="$1" bash "${REPO_DIR}/install.sh" >/dev/null 2>&1
-}
-
-run_remove() {
-  HOME="$1" bash "${REPO_DIR}/remove.sh" >/dev/null 2>&1
 }
 
 # A PATH containing everything install.sh needs EXCEPT jq, so the preflight
@@ -129,6 +125,28 @@ test_hook_preserves_sibling_repo_entry() {
   contains "${cmds}" "${REPO_DIR}-fork" "a sibling repo's hook must survive install"
   contains "${cmds}" "update failed" "this repo's hook should still be added"
   rm -rf "${home}"
+}
+
+test_install_refuses_non_array_session_start() {
+  local home content before after out rc kind
+  for kind in string object number; do
+    home="$(fake_home)"
+    case "${kind}" in
+      string) content='{"hooks":{"SessionStart":"oops"}}' ;;
+      object) content='{"hooks":{"SessionStart":{"foo":"bar"}}}' ;;
+      number) content='{"hooks":{"SessionStart":5}}' ;;
+    esac
+    printf '%s' "${content}" > "${home}/.claude/settings.json"
+    before="$(cat "${home}/.claude/settings.json")"
+    out="$(HOME="${home}" bash "${REPO_DIR}/install.sh" 2>&1)"
+    rc=$?
+    after="$(cat "${home}/.claude/settings.json")"
+    assert_eq "${rc}" "1" "install.sh should exit 1 when SessionStart is a ${kind}"
+    assert_eq "${after}" "${before}" "settings.json must be byte-identical when SessionStart is a ${kind}"
+    contains "${out}" "not an array" "error should say SessionStart is not an array (${kind})"
+    contains "${out}" "${home}/.claude/settings.json" "error should name settings.json (${kind})"
+    rm -rf "${home}"
+  done
 }
 
 test_fresh_install_links_rule_file() {
@@ -231,132 +249,12 @@ test_foreign_rule_file_is_preserved_on_install() {
   rm -rf "${home}"
 }
 
-test_foreign_rule_file_is_preserved_on_remove() {
-  local home marker
-  home="$(fake_home)"
-  mkdir -p "${home}/.claude/rules"
-  printf 'mine\n' > "${home}/.claude/rules/kotlin-spring.md"
-  run_install "${home}"
-  run_remove "${home}"
-  ok "[ -f '${home}/.claude/rules/kotlin-spring.md' ]" \
-    "user's own rule file must survive remove"
-  no "[ -L '${home}/.claude/rules/kotlin-spring.md' ]" \
-    "user's own rule file must not become a symlink after remove"
-  marker="$(cat "${home}/.claude/rules/kotlin-spring.md")"
-  assert_eq "${marker}" "mine" "user's rule file content must be unchanged after remove"
-  rm -rf "${home}"
-}
-
-test_remove_undoes_install() {
-  local home before after
-  home="$(fake_home)"
-  printf '{"theme":"auto"}\n' > "${home}/.claude/settings.json"
-  before="$(jq -S . "${home}/.claude/settings.json")"
-  run_install "${home}"
-  run_remove "${home}"
-  no "[ -e '${home}/.claude/rules/kotlin-spring.md' ] || [ -L '${home}/.claude/rules/kotlin-spring.md' ]" \
-    "rule symlink should be gone"
-  no "ls ${home}/.claude/skills/* >/dev/null 2>&1" "skill symlinks should be gone"
-  after="$(jq -S . "${home}/.claude/settings.json")"
-  assert_eq "${after}" "${before}" "settings.json should be restored to its prior content"
-  rm -rf "${home}"
-}
-
-test_remove_is_idempotent_and_safe_on_clean_machine() {
-  local home before after
-  home="$(fake_home)"
-  printf '{"theme":"auto"}\n' > "${home}/.claude/settings.json"
-  before="$(jq -S . "${home}/.claude/settings.json")"
-  ok "run_remove '${home}'" "remove.sh must exit 0 on a never-installed machine"
-  after="$(jq -S . "${home}/.claude/settings.json")"
-  assert_eq "${after}" "${before}" "remove on a never-installed machine must change nothing"
-  rm -rf "${home}"
-}
-
-test_remove_after_install_is_idempotent() {
-  local home first_state second_state
-  home="$(fake_home)"
-  run_install "${home}"
-  ok "run_remove '${home}'" "remove.sh must exit 0 right after an install"
-  first_state="$(find "${home}/.claude" | sort)
-$(jq -S . "${home}/.claude/settings.json" 2>/dev/null)"
-  ok "run_remove '${home}'" "remove.sh must exit 0 again when there is nothing left to remove"
-  second_state="$(find "${home}/.claude" | sort)
-$(jq -S . "${home}/.claude/settings.json" 2>/dev/null)"
-  assert_eq "${second_state}" "${first_state}" "a second remove must not change state left by the first"
-  rm -rf "${home}"
-}
-
-test_remove_preserves_foreign_content() {
-  local home own_skill own_md other_hook
-  home="$(fake_home)"
-  mkdir -p "${home}/.claude/skills/my-own-skill"
-  printf 'mine\n' > "${home}/.claude/skills/my-own-skill/SKILL.md"
-  printf '# my rules\n' > "${home}/.claude/CLAUDE.md"
-  jq -n '{hooks:{SessionStart:[{matcher:"startup",hooks:[{type:"command",command:"echo unrelated"}]}]}}' \
-    > "${home}/.claude/settings.json"
-  run_install "${home}"
-  run_remove "${home}"
-  own_skill="$(cat "${home}/.claude/skills/my-own-skill/SKILL.md")"
-  assert_eq "${own_skill}" "mine" "unrelated skill must survive remove"
-  own_md="$(cat "${home}/.claude/CLAUDE.md")"
-  assert_eq "${own_md}" "# my rules" "user's CLAUDE.md must survive remove unchanged"
-  other_hook="$(jq -r '[.hooks.SessionStart[].hooks[].command] | join(",")' "${home}/.claude/settings.json")"
-  assert_eq "${other_hook}" "echo unrelated" "unrelated SessionStart hook must survive"
-  rm -rf "${home}"
-}
-
-test_remove_strips_import_line_preserving_user_content() {
-  local home expected actual
-  home="$(fake_home)"
-  printf '# my own rules\n@%s/CLAUDE.md\nmore of my stuff\n' "${REPO_DIR}" > "${home}/.claude/CLAUDE.md"
-  expected="$(printf '# my own rules\nmore of my stuff\n')"
-  ok "run_remove '${home}'" "remove.sh must exit 0 when stripping the import line from a real file"
-  actual="$(cat "${home}/.claude/CLAUDE.md")"
-  assert_eq "${actual}" "${expected}" "user content around the import line must be byte-identical after the strip"
-  rm -rf "${home}"
-}
-
-test_remove_completes_when_claude_md_has_only_import_line() {
-  local home
-  home="$(fake_home)"
-  mkdir -p "${home}/.claude/rules"
-  chmod 500 "${home}/.claude/rules"
-  run_install "${home}"
-  chmod 700 "${home}/.claude/rules"
-  ok "[ -f '${home}/.claude/CLAUDE.md' ]" \
-    "setup: fallback install should create CLAUDE.md with only the import line"
-  ok "run_remove '${home}'" "remove.sh must exit 0 when CLAUDE.md contains only the import line"
-  no "[ -f '${home}/.claude/CLAUDE.md' ] && grep -qxF '@${REPO_DIR}/CLAUDE.md' '${home}/.claude/CLAUDE.md'" \
-    "import line must be gone"
-  no "ls ${home}/.claude/skills/* >/dev/null 2>&1" \
-    "skill symlinks must also be removed — a mid-script death on the import-line strip must not abort the rest of the uninstall"
-  rm -rf "${home}"
-}
-
-test_remove_preserves_foreign_claude_md_symlink() {
-  local home dotfiles target expected_content
-  home="$(fake_home)"
-  dotfiles="$(mktemp -d)"
-  target="${dotfiles}/shared-CLAUDE.md"
-  expected_content="$(printf '# shared dotfiles rules\n@%s/CLAUDE.md\n' "${REPO_DIR}")"
-  printf '%s\n' "${expected_content}" > "${target}"
-  ln -s "${target}" "${home}/.claude/CLAUDE.md"
-  ok "run_remove '${home}'" "remove.sh must exit 0 with a foreign CLAUDE.md symlink present"
-  ok "[ -L '${home}/.claude/CLAUDE.md' ]" \
-    "user's own CLAUDE.md symlink must still be a symlink, not replaced by a regular file"
-  assert_eq "$(readlink "${home}/.claude/CLAUDE.md")" "${target}" \
-    "user's own CLAUDE.md symlink must still point at its original target"
-  assert_eq "$(cat "${target}")" "${expected_content}" \
-    "the symlink's target file content must be untouched by remove.sh"
-  rm -rf "${home}" "${dotfiles}"
-}
-
 main() {
   test_preflight_requires_jq
   test_hook_warns_on_pull_failure
   test_hook_replaces_older_entry
   test_hook_preserves_sibling_repo_entry
+  test_install_refuses_non_array_session_start
   test_fresh_install_links_rule_file
   test_existing_user_claude_md_is_untouched
   test_legacy_symlink_is_migrated
@@ -364,14 +262,6 @@ main() {
   test_skills_are_linked
   test_foreign_skill_is_preserved
   test_foreign_rule_file_is_preserved_on_install
-  test_foreign_rule_file_is_preserved_on_remove
-  test_remove_undoes_install
-  test_remove_is_idempotent_and_safe_on_clean_machine
-  test_remove_after_install_is_idempotent
-  test_remove_preserves_foreign_content
-  test_remove_strips_import_line_preserving_user_content
-  test_remove_completes_when_claude_md_has_only_import_line
-  test_remove_preserves_foreign_claude_md_symlink
   printf '\n%d passed, %d failed\n' "${PASSED}" "${FAILED}"
   [ "${FAILED}" -eq 0 ]
 }

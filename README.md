@@ -6,6 +6,7 @@ session:
 
 - `skills/kotlin-test-writing-rules` — jtcop rule conventions for JUnit5 test classes
 - `skills/mapstruct-converter-conventions` — Spring `Converter`/MapStruct/`ConversionService` conventions
+- `skills/jooq-repository-pattern` — jOOQ data access on `jooq-starter` (repository per table, pagination, Liquibase codegen)
 - `skills/nextbi-analytics-contracts` — working in the NextBI analytics contracts repo (OpenAPI/Kafka contract-first, codegen, versioning)
 
 ## Install

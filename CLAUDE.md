@@ -1,6 +1,6 @@
 # Shared engineering guidance for Kotlin projects
 
-This repo also ships two on-demand skills — `kotlin-test-writing-rules` and `mapstruct-converter-conventions` — for guidance too narrow or example-heavy to keep loaded every session. Claude applies them automatically when relevant.
+This repo also ships four on-demand skills — `kotlin-test-writing-rules`, `mapstruct-converter-conventions`, `jooq-repository-pattern`, and `nextbi-analytics-contracts` — for guidance too narrow or example-heavy to keep loaded every session. Claude applies them automatically when relevant.
 
 IMPORTANT:
 
@@ -102,6 +102,8 @@ IMPORTANT:
 - Prefer explicit SQL or jOOQ-based solutions where they improve clarity and correctness.
 - Run jOOQ code generation against the migration-managed schema (Flyway/Liquibase) at build time; do not commit generated sources to VCS.
 - Under Spring Boot, prefer declarative `@Transactional` over jOOQ's own `DSLContext.transaction { }` — mixing the two causes known `SpringTransactionProvider` integration issues.
+- Prefer one repository per table over sharing a `DSLContext` across services; keep `DSLContext` inside the repository layer so table-specific SQL lives next to the table it queries and services depend on named repository methods.
+- Bake soft-delete and other always-on filters into a repository-level base condition rather than repeating the predicate at each call site; expose an explicit escape hatch (e.g. `getOneByIdIncludingDeleted`) when a caller genuinely needs the filtered-out rows.
 
 ## Messaging and async flows
 

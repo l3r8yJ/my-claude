@@ -1,17 +1,28 @@
 #!/usr/bin/env bash
-# Symlinks CLAUDE.md and skills/ into ~/.claude/ and wires a SessionStart
-# hook that pulls the latest version of this repo before each Claude Code
-# session.
+# Links this repo's guidance into ~/.claude/rules/ and its skills into
+# ~/.claude/skills/, then wires a SessionStart hook that pulls the latest
+# version of this repo before each Claude Code session. Never overwrites a
+# file it did not create.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="${HOME}/.claude"
 CLAUDE_MD="${CLAUDE_DIR}/CLAUDE.md"
+RULES_DIR="${CLAUDE_DIR}/rules"
+RULE_FILE="${RULES_DIR}/kotlin-spring.md"
 SKILLS_DIR="${CLAUDE_DIR}/skills"
 SETTINGS="${CLAUDE_DIR}/settings.json"
-PULL_CMD="git -C \"${REPO_DIR}\" pull --ff-only --quiet || true"
+IMPORT_LINE="@${REPO_DIR}/CLAUDE.md"
+PULL_CMD="git -C \"${REPO_DIR}\" pull --ff-only --quiet || echo \"my-claude: update failed (local commits or no network); guidance may be stale — check: git -C ${REPO_DIR} status\""
 
-mkdir -p "${CLAUDE_DIR}"
+for tool in git jq; do
+  if ! command -v "${tool}" > /dev/null 2>&1; then
+    echo "error: ${tool} is required but was not found on PATH. Nothing was changed." >&2
+    exit 1
+  fi
+done
+
+mkdir -p "${CLAUDE_DIR}" "${RULES_DIR}"
 
 if [ -e "${CLAUDE_MD}" ] || [ -L "${CLAUDE_MD}" ]; then
   if [ "$(readlink "${CLAUDE_MD}" 2>/dev/null || true)" = "${REPO_DIR}/CLAUDE.md" ]; then
@@ -53,20 +64,18 @@ if [ ! -e "${SETTINGS}" ]; then
   echo '{}' > "${SETTINGS}"
 fi
 
-if jq -e --arg cmd "${PULL_CMD}" \
-    '(.hooks.SessionStart // []) | any(.hooks[]?.command == $cmd)' \
-    "${SETTINGS}" > /dev/null 2>&1; then
-  echo "SessionStart pull hook already present in ${SETTINGS}"
-else
-  tmp="$(mktemp)"
-  jq --arg cmd "${PULL_CMD}" '
-    .hooks //= {} |
-    .hooks.SessionStart //= [] |
-    .hooks.SessionStart += [{
-      "matcher": "startup|resume",
-      "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]
-    }]
-  ' "${SETTINGS}" > "${tmp}"
-  mv "${tmp}" "${SETTINGS}"
-  echo "Added SessionStart pull hook to ${SETTINGS}"
-fi
+tmp="$(mktemp)"
+jq --arg repo "${REPO_DIR}" --arg cmd "${PULL_CMD}" '
+  .hooks //= {} |
+  .hooks.SessionStart //= [] |
+  .hooks.SessionStart |= (
+    map(.hooks |= map(select(((.command // "") | contains($repo)) | not)))
+    | map(select((.hooks | length) > 0))
+  ) |
+  .hooks.SessionStart += [{
+    "matcher": "startup|resume",
+    "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]
+  }]
+' "${SETTINGS}" > "${tmp}"
+mv "${tmp}" "${SETTINGS}"
+echo "Wired SessionStart pull hook in ${SETTINGS}"

@@ -212,6 +212,41 @@ test_foreign_skill_is_preserved() {
   rm -rf "${home}"
 }
 
+test_foreign_rule_file_is_preserved_on_install() {
+  local home marker
+  home="$(fake_home)"
+  mkdir -p "${home}/.claude/rules"
+  printf 'mine\n' > "${home}/.claude/rules/kotlin-spring.md"
+  run_install "${home}"
+  ok "[ -f '${home}/.claude/rules/kotlin-spring.md' ]" \
+    "user's own rule file must survive"
+  no "[ -L '${home}/.claude/rules/kotlin-spring.md' ]" \
+    "user's own rule file must not be replaced by a symlink"
+  marker="$(cat "${home}/.claude/rules/kotlin-spring.md")"
+  assert_eq "${marker}" "mine" "user's rule file content must be unchanged"
+  ok "[ -L '${home}/.claude/skills/jooq-repository-pattern' ]" \
+    "skills should still be linked after a rule-file collision"
+  ok "jq -e '(.hooks.SessionStart | length) > 0' '${home}/.claude/settings.json' >/dev/null" \
+    "SessionStart hook should still be wired after a rule-file collision"
+  rm -rf "${home}"
+}
+
+test_foreign_rule_file_is_preserved_on_remove() {
+  local home marker
+  home="$(fake_home)"
+  mkdir -p "${home}/.claude/rules"
+  printf 'mine\n' > "${home}/.claude/rules/kotlin-spring.md"
+  run_install "${home}"
+  run_remove "${home}"
+  ok "[ -f '${home}/.claude/rules/kotlin-spring.md' ]" \
+    "user's own rule file must survive remove"
+  no "[ -L '${home}/.claude/rules/kotlin-spring.md' ]" \
+    "user's own rule file must not become a symlink after remove"
+  marker="$(cat "${home}/.claude/rules/kotlin-spring.md")"
+  assert_eq "${marker}" "mine" "user's rule file content must be unchanged after remove"
+  rm -rf "${home}"
+}
+
 test_remove_undoes_install() {
   local home before after
   home="$(fake_home)"
@@ -328,6 +363,8 @@ main() {
   test_falls_back_to_import_when_symlink_unavailable
   test_skills_are_linked
   test_foreign_skill_is_preserved
+  test_foreign_rule_file_is_preserved_on_install
+  test_foreign_rule_file_is_preserved_on_remove
   test_remove_undoes_install
   test_remove_is_idempotent_and_safe_on_clean_machine
   test_remove_after_install_is_idempotent

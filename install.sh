@@ -22,6 +22,8 @@ for tool in git jq; do
   fi
 done
 
+trap 'rm -f "${tmp:-}"' EXIT
+
 mkdir -p "${CLAUDE_DIR}" "${RULES_DIR}"
 
 symlink_points_to() {
@@ -84,10 +86,11 @@ if [ ! -e "${SETTINGS}" ]; then
   echo '{}' > "${SETTINGS}"
 fi
 
-tmp="$(mktemp)"
-jq --arg repo "${REPO_DIR}" --arg cmd "${PULL_CMD}" '
+tmp="$(mktemp "${SETTINGS}.XXXXXX")"
+if ! jq --arg repo "${REPO_DIR}" --arg cmd "${PULL_CMD}" '
   .hooks //= {} |
   .hooks.SessionStart //= [] |
+  .hooks.SessionStart |= (if type == "array" then . else [] end) |
   .hooks.SessionStart |= (
     map(.hooks |= map(select(((.command // "") | contains($repo + "\"")) | not)))
     | map(select((.hooks | length) > 0))
@@ -96,6 +99,9 @@ jq --arg repo "${REPO_DIR}" --arg cmd "${PULL_CMD}" '
     "matcher": "startup|resume",
     "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]
   }]
-' "${SETTINGS}" > "${tmp}"
+' "${SETTINGS}" > "${tmp}"; then
+  echo "error: ${SETTINGS} is not valid JSON — symlinks and skills above are already in place, but the hook was not wired. Fix or remove ${SETTINGS} and re-run." >&2
+  exit 1
+fi
 mv "${tmp}" "${SETTINGS}"
 echo "Wired SessionStart pull hook in ${SETTINGS}"

@@ -212,6 +212,52 @@ test_foreign_skill_is_preserved() {
   rm -rf "${home}"
 }
 
+test_remove_undoes_install() {
+  local home before after
+  home="$(fake_home)"
+  printf '{"theme":"auto"}\n' > "${home}/.claude/settings.json"
+  before="$(jq -S . "${home}/.claude/settings.json")"
+  run_install "${home}"
+  run_remove "${home}"
+  no "[ -e '${home}/.claude/rules/kotlin-spring.md' ] || [ -L '${home}/.claude/rules/kotlin-spring.md' ]" \
+    "rule symlink should be gone"
+  no "ls ${home}/.claude/skills/* >/dev/null 2>&1" "skill symlinks should be gone"
+  after="$(jq -S . "${home}/.claude/settings.json")"
+  assert_eq "${after}" "${before}" "settings.json should be restored to its prior content"
+  rm -rf "${home}"
+}
+
+test_remove_is_idempotent_and_safe_on_clean_machine() {
+  local home before after
+  home="$(fake_home)"
+  printf '{"theme":"auto"}\n' > "${home}/.claude/settings.json"
+  before="$(jq -S . "${home}/.claude/settings.json")"
+  run_remove "${home}"
+  run_remove "${home}"
+  after="$(jq -S . "${home}/.claude/settings.json")"
+  assert_eq "${after}" "${before}" "remove on a never-installed machine must change nothing"
+  rm -rf "${home}"
+}
+
+test_remove_preserves_foreign_content() {
+  local home own_skill own_md other_hook
+  home="$(fake_home)"
+  mkdir -p "${home}/.claude/skills/my-own-skill"
+  printf 'mine\n' > "${home}/.claude/skills/my-own-skill/SKILL.md"
+  printf '# my rules\n' > "${home}/.claude/CLAUDE.md"
+  jq -n '{hooks:{SessionStart:[{matcher:"startup",hooks:[{type:"command",command:"echo unrelated"}]}]}}' \
+    > "${home}/.claude/settings.json"
+  run_install "${home}"
+  run_remove "${home}"
+  own_skill="$(cat "${home}/.claude/skills/my-own-skill/SKILL.md")"
+  assert_eq "${own_skill}" "mine" "unrelated skill must survive remove"
+  own_md="$(cat "${home}/.claude/CLAUDE.md")"
+  assert_eq "${own_md}" "# my rules" "user's CLAUDE.md must survive remove unchanged"
+  other_hook="$(jq -r '[.hooks.SessionStart[].hooks[].command] | join(",")' "${home}/.claude/settings.json")"
+  assert_eq "${other_hook}" "echo unrelated" "unrelated SessionStart hook must survive"
+  rm -rf "${home}"
+}
+
 main() {
   test_preflight_requires_jq
   test_hook_warns_on_pull_failure
@@ -223,6 +269,9 @@ main() {
   test_falls_back_to_import_when_symlink_unavailable
   test_skills_are_linked
   test_foreign_skill_is_preserved
+  test_remove_undoes_install
+  test_remove_is_idempotent_and_safe_on_clean_machine
+  test_remove_preserves_foreign_content
   printf '\n%d passed, %d failed\n' "${PASSED}" "${FAILED}"
   [ "${FAILED}" -eq 0 ]
 }

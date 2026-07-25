@@ -24,20 +24,45 @@ done
 
 mkdir -p "${CLAUDE_DIR}" "${RULES_DIR}"
 
-if [ -e "${CLAUDE_MD}" ] || [ -L "${CLAUDE_MD}" ]; then
-  if [ "$(readlink "${CLAUDE_MD}" 2>/dev/null || true)" = "${REPO_DIR}/CLAUDE.md" ]; then
-    echo "Symlink already in place: ${CLAUDE_MD} -> ${REPO_DIR}/CLAUDE.md"
-  else
-    BACKUP="${CLAUDE_MD}.bak.$(date +%Y%m%d%H%M%S)"
-    mv "${CLAUDE_MD}" "${BACKUP}"
-    echo "Backed up existing ${CLAUDE_MD} -> ${BACKUP}"
-    ln -sf "${REPO_DIR}/CLAUDE.md" "${CLAUDE_MD}"
-    echo "Symlinked ${CLAUDE_MD} -> ${REPO_DIR}/CLAUDE.md"
+symlink_points_to() {
+  [ -L "$1" ] && [ "$(readlink "$1")" = "$2" ]
+}
+
+append_import() {
+  if [ -f "${CLAUDE_MD}" ] && grep -qxF "${IMPORT_LINE}" "${CLAUDE_MD}"; then
+    echo "Import already present in ${CLAUDE_MD}"
+    return 0
   fi
-else
-  ln -sf "${REPO_DIR}/CLAUDE.md" "${CLAUDE_MD}"
-  echo "Symlinked ${CLAUDE_MD} -> ${REPO_DIR}/CLAUDE.md"
+  if [ -s "${CLAUDE_MD}" ] && [ -n "$(tail -c 1 "${CLAUDE_MD}")" ]; then
+    printf '\n' >> "${CLAUDE_MD}"
+  fi
+  printf '%s\n' "${IMPORT_LINE}" >> "${CLAUDE_MD}"
+  echo "Added import to ${CLAUDE_MD}: ${IMPORT_LINE}"
+}
+
+attach_guidance() {
+  if symlink_points_to "${RULE_FILE}" "${REPO_DIR}/CLAUDE.md"; then
+    echo "Already linked: ${RULE_FILE} -> ${REPO_DIR}/CLAUDE.md"
+    return 0
+  fi
+  if [ -e "${RULE_FILE}" ] || [ -L "${RULE_FILE}" ]; then
+    echo "warning: ${RULE_FILE} exists and was not created by this repo — skipping. Remove it and re-run to link this guidance." >&2
+    return 0
+  fi
+  if ln -s "${REPO_DIR}/CLAUDE.md" "${RULE_FILE}" 2> /dev/null; then
+    echo "Symlinked ${RULE_FILE} -> ${REPO_DIR}/CLAUDE.md"
+    return 0
+  fi
+  echo "Symlinks unavailable here — falling back to a CLAUDE.md import."
+  append_import
+}
+
+if symlink_points_to "${CLAUDE_MD}" "${REPO_DIR}/CLAUDE.md"; then
+  rm "${CLAUDE_MD}"
+  echo "Removed legacy symlink ${CLAUDE_MD}; guidance now loads from ${RULE_FILE}"
 fi
+
+attach_guidance
 
 mkdir -p "${SKILLS_DIR}"
 

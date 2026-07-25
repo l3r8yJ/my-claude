@@ -131,11 +131,65 @@ test_hook_preserves_sibling_repo_entry() {
   rm -rf "${home}"
 }
 
+test_fresh_install_links_rule_file() {
+  local home
+  home="$(fake_home)"
+  run_install "${home}"
+  ok "[ -L '${home}/.claude/rules/kotlin-spring.md' ]" "rule file should be a symlink"
+  assert_eq "$(readlink "${home}/.claude/rules/kotlin-spring.md")" \
+    "${REPO_DIR}/CLAUDE.md" "rule symlink should point at the repo CLAUDE.md"
+  no "[ -e '${home}/.claude/CLAUDE.md' ]" "install must not create ~/.claude/CLAUDE.md"
+  rm -rf "${home}"
+}
+
+test_existing_user_claude_md_is_untouched() {
+  local home before after
+  home="$(fake_home)"
+  printf '# my own rules\n- do the thing\n' > "${home}/.claude/CLAUDE.md"
+  before="$(cat "${home}/.claude/CLAUDE.md")"
+  run_install "${home}"
+  after="$(cat "${home}/.claude/CLAUDE.md")"
+  assert_eq "${after}" "${before}" "user's own CLAUDE.md must be byte-identical"
+  no "ls ${home}/.claude/CLAUDE.md.bak.* >/dev/null 2>&1" "no .bak file should be created"
+  rm -rf "${home}"
+}
+
+test_legacy_symlink_is_migrated() {
+  local home
+  home="$(fake_home)"
+  ln -s "${REPO_DIR}/CLAUDE.md" "${home}/.claude/CLAUDE.md"
+  run_install "${home}"
+  no "[ -e '${home}/.claude/CLAUDE.md' ] || [ -L '${home}/.claude/CLAUDE.md' ]" \
+    "legacy repo symlink at ~/.claude/CLAUDE.md should be removed"
+  ok "[ -L '${home}/.claude/rules/kotlin-spring.md' ]" "guidance should now load via rules/"
+  rm -rf "${home}"
+}
+
+test_falls_back_to_import_when_symlink_unavailable() {
+  local home count
+  home="$(fake_home)"
+  mkdir -p "${home}/.claude/rules"
+  chmod 500 "${home}/.claude/rules"
+  run_install "${home}"
+  ok "[ -f '${home}/.claude/CLAUDE.md' ]" "fallback should create ~/.claude/CLAUDE.md"
+  ok "grep -qxF '@${REPO_DIR}/CLAUDE.md' '${home}/.claude/CLAUDE.md'" \
+    "fallback should append the import line"
+  run_install "${home}"
+  count="$(grep -cxF "@${REPO_DIR}/CLAUDE.md" "${home}/.claude/CLAUDE.md")"
+  assert_eq "${count}" "1" "import line must not be duplicated on re-run"
+  chmod 700 "${home}/.claude/rules"
+  rm -rf "${home}"
+}
+
 main() {
   test_preflight_requires_jq
   test_hook_warns_on_pull_failure
   test_hook_replaces_older_entry
   test_hook_preserves_sibling_repo_entry
+  test_fresh_install_links_rule_file
+  test_existing_user_claude_md_is_untouched
+  test_legacy_symlink_is_migrated
+  test_falls_back_to_import_when_symlink_unavailable
   printf '\n%d passed, %d failed\n' "${PASSED}" "${FAILED}"
   [ "${FAILED}" -eq 0 ]
 }

@@ -69,7 +69,7 @@ jq --arg repo "${REPO_DIR}" --arg cmd "${PULL_CMD}" '
   .hooks //= {} |
   .hooks.SessionStart //= [] |
   .hooks.SessionStart |= (
-    map(.hooks |= map(select(((.command // "") | contains($repo)) | not)))
+    map(.hooks |= map(select(((.command // "") | contains($repo + "\"")) | not)))
     | map(select((.hooks | length) > 0))
   ) |
   .hooks.SessionStart += [{

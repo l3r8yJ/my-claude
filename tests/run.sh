@@ -118,10 +118,24 @@ test_hook_replaces_older_entry() {
   rm -rf "${home}"
 }
 
+test_hook_preserves_sibling_repo_entry() {
+  local home cmds
+  home="$(fake_home)"
+  jq -n --arg cmd "git -C \"${REPO_DIR}-fork\" pull --ff-only --quiet || true" \
+    '{hooks:{SessionStart:[{matcher:"startup|resume",hooks:[{type:"command",command:$cmd,timeout:5}]}]}}' \
+    > "${home}/.claude/settings.json"
+  run_install "${home}"
+  cmds="$(jq -r '[.hooks.SessionStart[].hooks[].command] | join("|")' "${home}/.claude/settings.json")"
+  contains "${cmds}" "${REPO_DIR}-fork" "a sibling repo's hook must survive install"
+  contains "${cmds}" "update failed" "this repo's hook should still be added"
+  rm -rf "${home}"
+}
+
 main() {
   test_preflight_requires_jq
   test_hook_warns_on_pull_failure
   test_hook_replaces_older_entry
+  test_hook_preserves_sibling_repo_entry
   printf '\n%d passed, %d failed\n' "${PASSED}" "${FAILED}"
   [ "${FAILED}" -eq 0 ]
 }

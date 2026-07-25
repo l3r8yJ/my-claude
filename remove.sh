@@ -19,6 +19,8 @@ if ! command -v jq > /dev/null 2>&1; then
   exit 1
 fi
 
+trap 'rm -f "${tmp:-}"' EXIT
+
 symlink_points_to() {
   [ -L "$1" ] && [ "$(readlink "$1")" = "$2" ]
 }
@@ -35,9 +37,9 @@ if symlink_points_to "${CLAUDE_MD}" "${REPO_DIR}/CLAUDE.md"; then
   echo "Removed legacy symlink ${CLAUDE_MD}"
 fi
 
-if [ -f "${CLAUDE_MD}" ] && grep -qxF "${IMPORT_LINE}" "${CLAUDE_MD}"; then
-  tmp="$(mktemp)"
-  grep -vxF "${IMPORT_LINE}" "${CLAUDE_MD}" > "${tmp}"
+if [ ! -L "${CLAUDE_MD}" ] && [ -f "${CLAUDE_MD}" ] && grep -qxF "${IMPORT_LINE}" "${CLAUDE_MD}"; then
+  tmp="$(mktemp "${CLAUDE_MD}.XXXXXX")"
+  grep -vxF "${IMPORT_LINE}" "${CLAUDE_MD}" > "${tmp}" || [ "$?" -le 1 ]
   mv "${tmp}" "${CLAUDE_MD}"
   echo "Removed import line from ${CLAUDE_MD}"
 fi
@@ -57,7 +59,7 @@ if [ -d "${SKILLS_DIR}" ]; then
 fi
 
 if [ -f "${SETTINGS}" ]; then
-  tmp="$(mktemp)"
+  tmp="$(mktemp "${SETTINGS}.XXXXXX")"
   jq --arg repo "${REPO_DIR}" '
     if (.hooks.SessionStart | type) == "array" then
       .hooks.SessionStart |= (

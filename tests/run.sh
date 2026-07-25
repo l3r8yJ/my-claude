@@ -232,10 +232,23 @@ test_remove_is_idempotent_and_safe_on_clean_machine() {
   home="$(fake_home)"
   printf '{"theme":"auto"}\n' > "${home}/.claude/settings.json"
   before="$(jq -S . "${home}/.claude/settings.json")"
-  run_remove "${home}"
-  run_remove "${home}"
+  ok "run_remove '${home}'" "remove.sh must exit 0 on a never-installed machine"
   after="$(jq -S . "${home}/.claude/settings.json")"
   assert_eq "${after}" "${before}" "remove on a never-installed machine must change nothing"
+  rm -rf "${home}"
+}
+
+test_remove_after_install_is_idempotent() {
+  local home first_state second_state
+  home="$(fake_home)"
+  run_install "${home}"
+  ok "run_remove '${home}'" "remove.sh must exit 0 right after an install"
+  first_state="$(find "${home}/.claude" | sort)
+$(jq -S . "${home}/.claude/settings.json" 2>/dev/null)"
+  ok "run_remove '${home}'" "remove.sh must exit 0 again when there is nothing left to remove"
+  second_state="$(find "${home}/.claude" | sort)
+$(jq -S . "${home}/.claude/settings.json" 2>/dev/null)"
+  assert_eq "${second_state}" "${first_state}" "a second remove must not change state left by the first"
   rm -rf "${home}"
 }
 
@@ -258,6 +271,52 @@ test_remove_preserves_foreign_content() {
   rm -rf "${home}"
 }
 
+test_remove_strips_import_line_preserving_user_content() {
+  local home expected actual
+  home="$(fake_home)"
+  printf '# my own rules\n@%s/CLAUDE.md\nmore of my stuff\n' "${REPO_DIR}" > "${home}/.claude/CLAUDE.md"
+  expected="$(printf '# my own rules\nmore of my stuff\n')"
+  ok "run_remove '${home}'" "remove.sh must exit 0 when stripping the import line from a real file"
+  actual="$(cat "${home}/.claude/CLAUDE.md")"
+  assert_eq "${actual}" "${expected}" "user content around the import line must be byte-identical after the strip"
+  rm -rf "${home}"
+}
+
+test_remove_completes_when_claude_md_has_only_import_line() {
+  local home
+  home="$(fake_home)"
+  mkdir -p "${home}/.claude/rules"
+  chmod 500 "${home}/.claude/rules"
+  run_install "${home}"
+  chmod 700 "${home}/.claude/rules"
+  ok "[ -f '${home}/.claude/CLAUDE.md' ]" \
+    "setup: fallback install should create CLAUDE.md with only the import line"
+  ok "run_remove '${home}'" "remove.sh must exit 0 when CLAUDE.md contains only the import line"
+  no "[ -f '${home}/.claude/CLAUDE.md' ] && grep -qxF '@${REPO_DIR}/CLAUDE.md' '${home}/.claude/CLAUDE.md'" \
+    "import line must be gone"
+  no "ls ${home}/.claude/skills/* >/dev/null 2>&1" \
+    "skill symlinks must also be removed — a mid-script death on the import-line strip must not abort the rest of the uninstall"
+  rm -rf "${home}"
+}
+
+test_remove_preserves_foreign_claude_md_symlink() {
+  local home dotfiles target expected_content
+  home="$(fake_home)"
+  dotfiles="$(mktemp -d)"
+  target="${dotfiles}/shared-CLAUDE.md"
+  expected_content="$(printf '# shared dotfiles rules\n@%s/CLAUDE.md\n' "${REPO_DIR}")"
+  printf '%s\n' "${expected_content}" > "${target}"
+  ln -s "${target}" "${home}/.claude/CLAUDE.md"
+  ok "run_remove '${home}'" "remove.sh must exit 0 with a foreign CLAUDE.md symlink present"
+  ok "[ -L '${home}/.claude/CLAUDE.md' ]" \
+    "user's own CLAUDE.md symlink must still be a symlink, not replaced by a regular file"
+  assert_eq "$(readlink "${home}/.claude/CLAUDE.md")" "${target}" \
+    "user's own CLAUDE.md symlink must still point at its original target"
+  assert_eq "$(cat "${target}")" "${expected_content}" \
+    "the symlink's target file content must be untouched by remove.sh"
+  rm -rf "${home}" "${dotfiles}"
+}
+
 main() {
   test_preflight_requires_jq
   test_hook_warns_on_pull_failure
@@ -271,7 +330,11 @@ main() {
   test_foreign_skill_is_preserved
   test_remove_undoes_install
   test_remove_is_idempotent_and_safe_on_clean_machine
+  test_remove_after_install_is_idempotent
   test_remove_preserves_foreign_content
+  test_remove_strips_import_line_preserving_user_content
+  test_remove_completes_when_claude_md_has_only_import_line
+  test_remove_preserves_foreign_claude_md_symlink
   printf '\n%d passed, %d failed\n' "${PASSED}" "${FAILED}"
   [ "${FAILED}" -eq 0 ]
 }

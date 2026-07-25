@@ -181,6 +181,37 @@ test_falls_back_to_import_when_symlink_unavailable() {
   rm -rf "${home}"
 }
 
+test_skills_are_linked() {
+  local home name
+  home="$(fake_home)"
+  run_install "${home}"
+  for name in kotlin-test-writing-rules mapstruct-converter-conventions \
+              jooq-repository-pattern nextbi-analytics-contracts; do
+    ok "[ -L '${home}/.claude/skills/${name}' ]" "${name} should be symlinked"
+    assert_eq "$(readlink "${home}/.claude/skills/${name}")" \
+      "${REPO_DIR}/skills/${name}" "${name} should point into the repo"
+  done
+  rm -rf "${home}"
+}
+
+test_foreign_skill_is_preserved() {
+  local home marker
+  home="$(fake_home)"
+  mkdir -p "${home}/.claude/skills/kotlin-test-writing-rules"
+  printf 'mine\n' > "${home}/.claude/skills/kotlin-test-writing-rules/SKILL.md"
+  run_install "${home}"
+  ok "[ -d '${home}/.claude/skills/kotlin-test-writing-rules' ]" \
+    "user's own skill directory must survive"
+  no "[ -L '${home}/.claude/skills/kotlin-test-writing-rules' ]" \
+    "user's own skill must not be replaced by a symlink"
+  marker="$(cat "${home}/.claude/skills/kotlin-test-writing-rules/SKILL.md")"
+  assert_eq "${marker}" "mine" "user's skill content must be unchanged"
+  no "ls -d ${home}/.claude/skills/*.bak.* >/dev/null 2>&1" "no .bak directory should be created"
+  ok "[ -L '${home}/.claude/skills/jooq-repository-pattern' ]" \
+    "other skills should still be linked after a skip"
+  rm -rf "${home}"
+}
+
 main() {
   test_preflight_requires_jq
   test_hook_warns_on_pull_failure
@@ -190,6 +221,8 @@ main() {
   test_existing_user_claude_md_is_untouched
   test_legacy_symlink_is_migrated
   test_falls_back_to_import_when_symlink_unavailable
+  test_skills_are_linked
+  test_foreign_skill_is_preserved
   printf '\n%d passed, %d failed\n' "${PASSED}" "${FAILED}"
   [ "${FAILED}" -eq 0 ]
 }

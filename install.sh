@@ -69,19 +69,14 @@ mkdir -p "${SKILLS_DIR}"
 for skill_src in "${REPO_DIR}"/skills/*/; do
   skill_name="$(basename "${skill_src}")"
   skill_dst="${SKILLS_DIR}/${skill_name}"
-  if [ -e "${skill_dst}" ] || [ -L "${skill_dst}" ]; then
-    if [ "$(readlink "${skill_dst}" 2>/dev/null || true)" = "${REPO_DIR}/skills/${skill_name}" ]; then
-      echo "Symlink already in place: ${skill_dst} -> ${REPO_DIR}/skills/${skill_name}"
-    else
-      BACKUP="${skill_dst}.bak.$(date +%Y%m%d%H%M%S)"
-      mv "${skill_dst}" "${BACKUP}"
-      echo "Backed up existing ${skill_dst} -> ${BACKUP}"
-      ln -sf "${REPO_DIR}/skills/${skill_name}" "${skill_dst}"
-      echo "Symlinked ${skill_dst} -> ${REPO_DIR}/skills/${skill_name}"
-    fi
+  skill_target="${REPO_DIR}/skills/${skill_name}"
+  if symlink_points_to "${skill_dst}" "${skill_target}"; then
+    echo "Already linked: ${skill_dst} -> ${skill_target}"
+  elif [ -e "${skill_dst}" ] || [ -L "${skill_dst}" ]; then
+    echo "warning: ${skill_dst} exists and was not created by this repo — skipping. Remove it and re-run to link this repo's version." >&2
   else
-    ln -sf "${REPO_DIR}/skills/${skill_name}" "${skill_dst}"
-    echo "Symlinked ${skill_dst} -> ${REPO_DIR}/skills/${skill_name}"
+    ln -s "${skill_target}" "${skill_dst}"
+    echo "Symlinked ${skill_dst} -> ${skill_target}"
   fi
 done
 

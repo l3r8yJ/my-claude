@@ -41,6 +41,10 @@ demaJooq {
 }
 ```
 
+`databaseImage` is a Testcontainers image spec, not a raw Docker image name —
+the plugin concatenates it into `jdbc:tc:$databaseImage:///...`, which is why it
+reads `postgresql:...` (the Testcontainers JDBC scheme) rather than `postgres:...`.
+
 **Manual route** — the stock jOOQ Gradle plugin plus the Testcontainers-backed
 `Database` implementation:
 
@@ -50,7 +54,7 @@ plugins {
 }
 
 dependencies {
-    jooqGenerator("org.dema:jooq-liquibase-testcontainer:x.x.x")
+    jooqCodegen("org.dema:jooq-liquibase-testcontainer:x.x.x")
 }
 
 jooq {
@@ -83,27 +87,32 @@ later runs reuse it.
 `LiquibasePostgresTcDatabase` extends jOOQ's `PostgresDatabase` and applies the
 changelog over the generator's own connection before jOOQ introspects metadata.
 
-Footguns:
+Footguns on both routes:
 
 - `liquibaseChangelogFile` must be an **absolute** path. The library resolves
   relative `include` references from that file's directory, so a relative value
   silently fails to find included changelogs.
 - Exclude `databasechangelog|databasechangeloglock` or Liquibase's bookkeeping
   tables end up in your generated API.
-- Under these defaults `timestamptz` maps to `java.time.LocalDateTime`.
-- No POJOs, DAOs, or `RecordN` types are generated — you get `Record`s and
-  `DSLContext` only. Do not go looking for a generated POJO to map to.
-- Generated sources land in a dedicated `jooq` source set
-  (`build/generated/sources/jooq`) and stay out of VCS.
+
+What the **convention plugin** sets for you, and the manual route does not — on
+the manual route configure each one yourself or expect stock jOOQ behaviour:
+
+- A `forcedType` mapping `timestamptz` to `java.time.LocalDateTime`. Stock jOOQ
+  maps `timestamptz` to `OffsetDateTime`, so without that forced type you get a
+  different generated type — and the offset back. The forced type is what makes
+  `TimestampsRecordListener`, which writes `LocalDateTime`, line up with the
+  generated records.
+- `pojos`, `daos`, and `recordsImplementingRecordN` all off — you get `Record`s
+  and `DSLContext` only. Do not go looking for a generated POJO to map to.
+- A `target` under `build/generated/sources/jooq`, wired as its own `jooq`
+  source set and kept out of VCS.
 
 ## 1. One repository per table on `AbstractRepository`
 
 ```kotlin
 @Component
-class CommentRepo : AbstractRepository<Comments, CommentsRecord>(
-    table = COMMENTS,
-    baseCondition = noCondition(),
-) {
+class CommentRepo : AbstractRepository<Comments, CommentsRecord>(COMMENTS) {
     fun commenterIdsOf(workItemId: UUID): List<UUID> =
         dsl.selectDistinct(COMMENTS.AUTHOR_ID)
             .from(COMMENTS)
@@ -112,9 +121,23 @@ class CommentRepo : AbstractRepository<Comments, CommentsRecord>(
 }
 ```
 
-The base class supplies a `protected dsl` and the common CRUD operations
-(`findById`, `store`, `delete`), so each repository only adds what is specific
-to its table.
+The constructor takes the table and an optional `baseCondition` that defaults to
+`noCondition()`, so a repository with no base filter passes the table alone.
+
+The base class supplies a `protected dsl` and the inherited operations
+`getOneBy`, `getAllBy`, `deleteBy`, `store`, `newRec`, `upsert`, and
+`insertOnConflictDoNothing`, so each repository only adds what is specific to
+its table. There is no `findById` and no `delete` — do not reach for them.
+
+**Always wrap an inherited method in a method the repository declares itself**,
+even a one-liner like `fun getOneById(id: UUID) = getOneBy { it.ID.eq(id) }`.
+Those methods are compiled `final` in the jar and `dsl` is a `lateinit` field
+injected into the target, so calling one from outside the class through a
+proxied bean — a single `@Transactional` anywhere in the app is enough for
+Spring to use a CGLIB subclass — runs against the un-autowired proxy and throws
+`UninitializedPropertyAccessException: lateinit property dsl has not been
+initialized`. That includes tests: give the test a repository method to call
+rather than invoking `getOneBy`/`store` on the injected reference.
 
 Return the generated `*Record` type. It already mirrors the table, so a parallel
 DTO per table buys nothing and drifts. Map to a domain model at the service
@@ -139,11 +162,13 @@ class ProjectRepo : AbstractRepository<Projects, ProjectsRecord>(
 }
 ```
 
-Every query inherited from the base class picks the condition up automatically,
-so soft-deleted rows are invisible by default.
+`getOneBy` and `getAllBy` route through the base class's
+`selectFrom(table).where(baseCondition)`, so soft-deleted rows are invisible to
+them by default.
 
-**A hand-written query in the repository does not.** It builds its own `where`,
-so it must apply `.and(baseCondition)` itself — that asymmetry is the usual
+**Nothing else applies it.** `deleteBy`, `upsert`, `insertOnConflictDoNothing`,
+and every hand-written query in the repository build their own `where`, so they
+must apply `.and(baseCondition)` themselves — that asymmetry is the usual
 source of "why is this deleted row showing up". When you deliberately want the
 filtered-out rows, put it in the method name (`getOneByIdIncludingDeleted`) so
 the intent is visible at the call site.
@@ -181,9 +206,11 @@ dema:
       updated-at-column: updated_at
 ```
 
-`TimestampsRecordListener` populates the configured columns on every `store()`,
-on both insert and update. Do not set them by hand in a record, a service, or a
-database trigger — you will get two sources of truth that disagree.
+`TimestampsRecordListener` fills the configured columns on every `store()`: the
+created-at column only when it is still null, the updated-at column on every
+write. So created-at survives updates and updated-at moves with each one. Do not
+set either by hand in a record, a service, or a database trigger — you will get
+two sources of truth that disagree.
 
 ## 6. Spring Data pagination
 
@@ -229,7 +256,7 @@ hits known `SpringTransactionProvider` issues.
 ## 7. Test repositories against real Postgres
 
 ```kotlin
-internal class CommentRepoITCase : AbstractIntegrationTest() {
+internal class CommentRepoITCase : AbstractPostgresITCase() {
 
     @Autowired
     private lateinit var commentRepo: CommentRepo
@@ -239,12 +266,7 @@ internal class CommentRepoITCase : AbstractIntegrationTest() {
         val workItem = TestWorkItemsRecord().storeRec()
         val author = UUID.randomUUID()
         repeat(2) { index ->
-            CommentsRecord().apply {
-                id = UUID.randomUUID()
-                workItemId = workItem.id
-                authorId = author
-                text = "c$index"
-            }.storeRec()
+            TestCommentsRecord(workItemId = workItem.id, authorId = author, text = "c$index").storeRec()
         }
         val authors = commentRepo.commenterIdsOf(workItem.id)
         assertThat(authors, name = "distinct comment authors of $workItem").containsExactly(author)
@@ -252,9 +274,16 @@ internal class CommentRepoITCase : AbstractIntegrationTest() {
 }
 ```
 
-`AbstractIntegrationTest` runs a Postgres container and issues
+`AbstractPostgresITCase` starts one Postgres container from a companion-object
+static initializer, registers it with `@ServiceConnection`, and issues
 `TRUNCATE ... CASCADE` before each test, so tests cannot contaminate each other.
-`storeRec()` persists a record without a test touching `DSLContext` directly.
+
+Build every fixture through a fake object per table (`TestWorkItemsRecord`,
+`TestCommentsRecord`), never mixing them with raw `CommentsRecord()` calls in
+the same test. A record built by its constructor is *detached* — it carries no
+jOOQ `Configuration`, so `.store()` on it fails with `DetachedException`.
+`storeRec()` is the project's test helper that attaches the record to the test
+`DSLContext` and stores it, which is what keeps `DSLContext` out of the test.
 
 The query runs against real Postgres, so a wrong column name or a bad cast fails
 the test instead of production. Do not substitute H2 or a mocked repository —

@@ -11,8 +11,8 @@ session:
 
 ## Requirements
 
-`bash`, `git`, and `jq`. The installer checks for them and exits without
-changing anything if one is missing.
+`bash`, `git`, and `jq`. The installer checks for `git` and `jq` and exits
+without changing anything if either is missing.
 
 ## Install
 
@@ -51,9 +51,10 @@ the `rules/` mechanism, so the guidance is not loaded twice.
 ```
 
 Removes the rule link, the skill links, the import line if one was added, and
-this repo's `SessionStart` hook. Anything it did not create is left untouched.
-It does not delete the clone itself — `rm -rf` this directory afterwards if
-you want it gone.
+this repo's `SessionStart` hook. If an earlier install left a legacy
+`~/.claude/CLAUDE.md` symlink pointing into this repo, that is removed too.
+Anything it did not create is left untouched. It does not delete the clone
+itself — `rm -rf` this directory afterwards if you want it gone.
 
 ## Tests
 

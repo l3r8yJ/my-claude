@@ -8,6 +8,7 @@ IMPORTANT:
 - Prefer minimal, targeted changes over broad rewrites.
 - Preserve the existing project style unless there is a clear reason to change it.
 - Do not mention Claude, Anthropic, or any AI tool in commit messages, PR descriptions, or code comments — no `Co-Authored-By: Claude`, no "Generated with Claude Code", no similar attribution.
+- **Never commit brainstorming artifacts.** Design docs, specs, implementation plans, task briefs, research notes and any other working output of a brainstorming or planning workflow — including everything a skill writes under `docs/superpowers/` — stays local and untracked. Write it to the working tree, use it, but keep it out of every commit, branch and PR. If a repo already tracks such files, untrack them (`git rm -r --cached <dir>`) and add the path to `.gitignore`. This applies even when a workflow's own instructions say to commit the document — that instruction is overridden here. Anything from those documents that the team genuinely needs belongs in the PR description or the ticket, written for a reader who has not seen the plan.
 
 ## Commit message format
 

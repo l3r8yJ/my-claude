@@ -325,7 +325,33 @@ Mark read paths `@Transactional(readOnly = true)`. Prefer declarative
 `@Transactional` over jOOQ's own `DSLContext.transaction { }` — mixing the two
 hits known `SpringTransactionProvider` issues.
 
-## 7. Test repositories against real Postgres
+## 7. Prefer a scenario test; reach for a repository test only when nothing else can
+
+**Do not write a test per repository method.** A repository is an implementation
+detail, and a test that calls `commentRepo.commenterIdsOf(id)` and asserts on
+rows is testing the mapping you just wrote, not the behaviour anyone depends on.
+It also pins the repository's shape, so a later refactor breaks tests without
+breaking the product.
+
+Drive the real entry point instead — the HTTP request, the consumed message, the
+scheduled job — and assert on what an observer sees: the response body, the rows
+that resulted, the events published. That exercises the repository *and* the
+service logic *and* the wiring, and it survives the repository being reshaped.
+Whatever a scenario can reach, a scenario should cover.
+
+A direct repository test earns its place only when a scenario genuinely cannot
+reach the behaviour. Legitimate cases, all narrow:
+
+- a query-count assertion pinning an N+1 fix (see §3a) where the counting
+  harness would be unwieldy through a full scenario
+- a write path with no read path in the product, so nothing observable exists
+  to assert on — though that usually means the write is dead code, and deleting
+  it beats testing it
+- a branch reachable only from data an entry point cannot produce, such as rows
+  left by an older schema version
+
+When one of those applies, write it against real Postgres — never H2, never a
+mocked repository, either of which hides the bug the test exists to catch:
 
 ```kotlin
 internal class CommentRepoITCase : AbstractPostgresITCase() {

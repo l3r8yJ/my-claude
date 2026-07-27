@@ -81,6 +81,7 @@ IMPORTANT:
 - Prefer assertk (`assertThat`) for assertions, rather than JUnit 5 `Assertions` or Hamcrest. Group multiple assertions in a single test with assertk's `assertAll { }`.
 - Prefer `spring-mockk` for mocking in Spring tests.
 - For asynchronous assertions and eventual consistency checks, prefer `awaitility`.
+- **Never use `Thread.sleep` in a test.** A fixed sleep is either too short (flaky under CI load) or too long (slow suite), and it encodes no statement about what the test is waiting for. Use `awaitility` — `await().atMost(...).until { condition }` for a condition, `untilAsserted { ... }` when the wait is on assertions. This holds even when the sleep looks harmless: waiting for a clock to advance, for a debounce window, or for a background thread to start are all conditions worth naming. Poll on the thing that actually has to become true, and poll *before* the action when the value under test is already final afterwards — polling after a final value turns a real failure into a timeout instead of an immediate, readable mismatch. If nothing pollable exists, inject a controllable clock or a latch rather than sleeping.
 - For integration tests, prefer Testcontainers.
 - Use Testcontainers for PostgreSQL and Kafka when applicable.
 - Do not use H2 as a substitute for PostgreSQL unless explicitly requested.

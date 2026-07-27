@@ -291,3 +291,56 @@ either one hides exactly the bug this test exists to catch.
 
 See [[kotlin-test-writing-rules]] for naming, `ITCase` layout, and fake-object
 conventions.
+
+## 8. Library and dialect caveats
+
+Three edges of `jooq-starter`'s pagination and `RETURNING` support, each of
+which produced a real bug or a real misunderstanding.
+
+**`JooqUtils.paginate` reports a zero total for an empty window.**
+
+The total rides on a `count() over ()` column carried by the returned rows,
+and the `Page`-returning overload short-circuits with `if (result.isEmpty())
+return Page.empty(pageRequest)`. A page past the end of the data therefore
+reports `totalElements = 0` and `totalPages = 0` instead of the true count —
+a caller cannot tell "no results at all" from "past the end of N results". A
+separate `fetchCount` does not have this problem, because it counts
+independently of the returned rows:
+
+```kotlin
+fun listOrders(pageable: Pageable): Page<OrderEntry> {
+    val page = JooqUtils.paginate(dsl, dsl.selectFrom(ORDERS), sortFields, pageable, ORDERS)
+    return if (page.isEmpty) {
+        PageImpl(emptyList(), pageable, dsl.fetchCount(ORDERS).toLong())
+    } else {
+        page.map { it.toEntry() }
+    }
+}
+```
+
+The fallback count must carry the same predicate as the main query — here
+there is none, so `fetchCount(ORDERS)` matches it. A filtered query needs the
+same filter applied in both places, or the out-of-range total over-reports.
+
+**Two `paginate` overloads resolve sorts differently.**
+
+The overload taking `(dsl, select, pageable, table)` resolves `pageable.sort`
+through a private helper that matches **physical column names**. A caller
+sorting by a domain property whose column is spelled differently gets a
+rejection instead of a sorted page. The overload taking an explicit
+`SortField<?>[]` bypasses that resolution entirely. Whenever a
+property-to-column map already exists for a repository, use the explicit
+`SortField` overload and keep that map as the only translation path — do not
+let both resolution paths exist for the same table.
+
+**`returningResult` is emulated on SQLite, not native.**
+
+On the Open Source edition, `nativeSupportReturning()` is false whenever
+`fetchTriggerValuesAfterReturning()` is true, which is the OSS default. jOOQ
+then emits an `insert …` followed by `select id from t where _rowid_ =
+last_insert_rowid()` — no `RETURNING` clause reaches the query log. It is
+still correct: jOOQ runs the follow-up `select` on the *same pinned
+connection* as the `insert`, which is what makes the result independent of
+any ambient transaction. A comment or error message asserting that a
+`RETURNING` clause is on the wire will send the next reader looking for SQL
+that is not there — describe the emulation, not the method name.

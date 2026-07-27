@@ -204,7 +204,9 @@ test_skills_are_linked() {
   home="$(fake_home)"
   run_install "${home}"
   for name in kotlin-test-writing-rules mapstruct-converter-conventions \
-              jooq-repository-pattern nextbi-analytics-contracts; do
+              jooq-repository-pattern migrating-jpa-to-jooq-starter \
+              nextbi-analytics-contracts verifying-library-behavior \
+              writing-halt-gates-into-plans reviewing-across-task-seams; do
     ok "[ -L '${home}/.claude/skills/${name}' ]" "${name} should be symlinked"
     assert_eq "$(readlink "${home}/.claude/skills/${name}")" \
       "${REPO_DIR}/skills/${name}" "${name} should point into the repo"

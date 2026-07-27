@@ -1,6 +1,6 @@
 # Shared engineering guidance for Kotlin projects
 
-This repo also ships four on-demand skills — `kotlin-test-writing-rules`, `mapstruct-converter-conventions`, `jooq-repository-pattern`, and `nextbi-analytics-contracts` — for guidance too narrow or example-heavy to keep loaded every session. Claude applies them automatically when relevant.
+This repo also ships eight on-demand skills — `kotlin-test-writing-rules`, `mapstruct-converter-conventions`, `jooq-repository-pattern`, `migrating-jpa-to-jooq-starter`, `nextbi-analytics-contracts`, `verifying-library-behavior`, `writing-halt-gates-into-plans`, and `reviewing-across-task-seams` — for guidance too narrow or example-heavy to keep loaded every session. Claude applies them automatically when relevant.
 
 IMPORTANT:
 

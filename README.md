@@ -7,7 +7,11 @@ session:
 - `skills/kotlin-test-writing-rules` — jtcop rule conventions for JUnit5 test classes
 - `skills/mapstruct-converter-conventions` — Spring `Converter`/MapStruct/`ConversionService` conventions
 - `skills/jooq-repository-pattern` — jOOQ data access on `jooq-starter` (repository per table, pagination, Liquibase codegen)
+- `skills/migrating-jpa-to-jooq-starter` — replacing Spring Data JPA entities and repositories with `jooq-starter` equivalents
 - `skills/nextbi-analytics-contracts` — working in the NextBI analytics contracts repo (OpenAPI/Kafka contract-first, codegen, versioning)
+- `skills/verifying-library-behavior` — establishing what a library actually does, by inspection rather than inference
+- `skills/writing-halt-gates-into-plans` — stopping a planned task when its premise turns out to be false
+- `skills/reviewing-across-task-seams` — whole-branch review for defects that live between task scopes
 
 ## Requirements
 

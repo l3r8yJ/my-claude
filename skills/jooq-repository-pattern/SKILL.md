@@ -180,6 +180,65 @@ method. Services call `commentRepo.commenterIdsOf(id)`; they never assemble a
 query. Queries then sit next to the table they read, and service code stays
 readable.
 
+## 3a. No N+1: never issue a query per row
+
+A query inside a loop is banned, in repositories and in the services that call
+them. jOOQ has no lazy loading and no session cache, so nothing rescues a
+per-row query the way a Hibernate first-level cache sometimes masked one — every
+iteration is a real round trip.
+
+The two shapes to watch for:
+
+**Reads — a per-parent query for children.**
+
+```kotlin
+// Wrong: one query for executions, then one more per execution
+val executions = executionRepo.findByTaskId(taskId)
+val details = executions.map { execution ->
+    val steps = stepRepo.findByExecutionId(execution.id)   // N+1
+    ...
+}
+
+// Right: two queries total, grouped in Kotlin
+val executions = executionRepo.findByTaskId(taskId)
+if (executions.isEmpty()) return emptyList()
+val stepsByExecution = stepRepo
+    .findByExecutionIdIn(executions.map { it.id })
+    .groupBy { it.executionId }
+val details = executions.map { execution ->
+    val steps = stepsByExecution[execution.id].orEmpty()
+    ...
+}
+```
+
+Give the repository an `…In(ids: Collection<ID>)` method taking the whole id set
+and returning the flat list; group by the foreign key at the call site. Two
+round trips, constant in N. Guard the empty case — `IN ()` is a wasted query.
+
+Prefer this two-query shape over a JOIN or `MULTISET` that reshapes children
+into the parent row: it stays readable, avoids duplicating parent columns across
+child rows, and does not depend on dialect-specific JSON aggregation.
+
+**Writes — a statement per row.** `AbstractRepository.upsert` and
+`insertOnConflictDoNothing` take a single record, so `records.forEach { upsert(it) }`
+is N statements. Send one batch instead (`dsl.batch(queries).execute()`), or a
+single multi-row insert. "It is only a handful of rows" is how this gets into a
+hot path later.
+
+**Verify by counting queries, not by asserting the result.** The N+1 version
+returns exactly the same rows — a correctness test passes either way and proves
+nothing. Count statements (a jOOQ `ExecuteListener` is the least intrusive way)
+and assert the count is *constant* across two different N values, e.g. seed 3
+parents and then 5 and expect the same number both times. A test that only
+checks the count at one N cannot tell a constant from a coincidence.
+
+**One legitimate exception:** a per-row query that exists to get a per-row
+*transaction boundary* — a reconciliation or batch job where each item is
+handled in its own transaction and individually error-guarded, so one bad row
+cannot roll back or abort the rest. Prefetching there would collapse the
+boundaries. When you rely on that, say so in the KDoc, or someone will
+"optimise" it away.
+
 ## 4. `DSLContext` never leaves the repository layer
 
 ```kotlin

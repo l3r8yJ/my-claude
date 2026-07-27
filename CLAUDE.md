@@ -24,6 +24,7 @@ IMPORTANT:
 - If there is a tradeoff between readability and performance, explain both approaches and prefer the simpler one unless the performance
   benefit is material.
 - Prefer minimal invasive refactoring.
+- **No out-of-process calls inside a loop.** Database queries, HTTP/REST requests, Kafka publishes, cache and object-storage round trips — none of them belong in a `for`/`forEach`/`map` body, in any layer. Use the batch or bulk form (an `IN (…)` query, a multi-record publish, a bulk endpoint) and group results in memory, or collect the work and issue one call at the end. Two round trips that stay constant beat N that grow with the data. Beyond latency, a loop of remote calls that fails halfway leaves partially-applied state with no transaction to roll back. The sole exception is per-item work that exists to give each item its own transaction boundary and error guard, as in a reconciliation job — document that in the KDoc, because it is indistinguishable from the bug on sight. "The API has no batch form" is not that exception: it is still an unbatched loop, and it needs a bounded concurrency limit and an explicit policy for what happens to the remaining items after the first failure.
 - Avoid changing public contracts, schemas, or APIs unless the task explicitly requires it.
 - When making changes, consider backward compatibility, migration risks, and operational impact.
 

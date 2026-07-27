@@ -180,12 +180,20 @@ method. Services call `commentRepo.commenterIdsOf(id)`; they never assemble a
 query. Queries then sit next to the table they read, and service code stays
 readable.
 
-## 3a. No N+1: never issue a query per row
+## 3a. No N+1: never issue a query — or any remote call — per row
 
 A query inside a loop is banned, in repositories and in the services that call
 them. jOOQ has no lazy loading and no session cache, so nothing rescues a
 per-row query the way a Hibernate first-level cache sometimes masked one — every
 iteration is a real round trip.
+
+The same ban covers every other out-of-process call in a loop: HTTP/REST
+requests, Kafka publishes, cache round trips, object-storage calls. The failure
+mode is worse there than for SQL, because those calls are slower, and because a
+loop that dies halfway leaves a partially-published, partially-written mess with
+no transaction to roll back. Reach for the batch/bulk form of the API
+(multi-record publish, a bulk endpoint, `mget`), or collect the work and issue
+one call at the end.
 
 The two shapes to watch for:
 
@@ -232,12 +240,17 @@ and assert the count is *constant* across two different N values, e.g. seed 3
 parents and then 5 and expect the same number both times. A test that only
 checks the count at one N cannot tell a constant from a coincidence.
 
-**One legitimate exception:** a per-row query that exists to get a per-row
+**One legitimate exception:** per-item work that exists to get a per-item
 *transaction boundary* — a reconciliation or batch job where each item is
-handled in its own transaction and individually error-guarded, so one bad row
-cannot roll back or abort the rest. Prefetching there would collapse the
-boundaries. When you rely on that, say so in the KDoc, or someone will
-"optimise" it away.
+handled in its own transaction and individually error-guarded, so one bad item
+cannot roll back or abort the rest. Prefetching, or collapsing the sends into
+one batch, would destroy exactly that isolation. When you rely on it, say so in
+the KDoc, or someone will "optimise" it away.
+
+Note the exception is about *isolation*, not about convenience. "Each item needs
+its own call because the API has no batch form" is not the exception — that is
+an unbatched loop, and it still needs a bounded concurrency limit and a failure
+policy that says what happens to items after the first error.
 
 ## 4. `DSLContext` never leaves the repository layer
 

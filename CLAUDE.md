@@ -58,8 +58,11 @@ IMPORTANT:
 ## Function body style
 
 - Function bodies must not contain blank lines or inline comments.
-- All explanatory context — purpose, assumptions, edge cases, why — belongs in the KDoc/Javadoc block above the function signature, not inside the body.
-- Keep KDoc/Javadoc terse and factual — state what the function does, its params, returns, and throws; no prose no one will read. If a line doesn't help a caller, cut it.
+- Explanatory context that is genuinely needed — an assumption, an edge case, a non-obvious "why" — goes in the KDoc/Javadoc above the signature, never inside the body. This is about *placement*, not a licence to write more: it does not mean every function needs a doc block.
+- **KDoc/Javadoc: as short as possible, and usually absent.** Default to no doc block at all. A clear name and signature already say what most functions do, and restating them adds noise a reader has to skim past.
+- Write one when a caller would otherwise get it wrong — a non-obvious constraint, a surprising return, a side effect, a `@throws` worth catching. Then write **one sentence**. Go past one sentence only for something a reader genuinely cannot infer from the code, and stop the moment the point is made.
+- Never restate the signature in prose (`@param userId the user id`), never narrate the implementation line by line, and never record how the code came to be — no bug archaeology, no "previously this used X", no alternatives considered. That belongs in the commit message or the ticket, which is where someone looks for history.
+- The test: delete the doc block and ask whether a caller could still use the function correctly. If yes, leave it deleted.
 
 ## Naming and API design
 

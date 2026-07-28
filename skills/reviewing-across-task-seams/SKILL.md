@@ -23,8 +23,8 @@ adds nothing — it has to look for a different class of thing.
 3. **Sibling drift.** A mechanical change applied to N similar files.
    Per-task review sees one file; only a whole-branch pass sees that
    the eighth diverged.
-4. **Asserted mechanisms.** Claims in commit messages, KDoc, or error
-   strings describing machinery no single task verified end to end.
+4. **Asserted mechanisms.** Claims in commit messages, error strings, or
+   test names describing machinery no single task verified end to end.
    Pair with [[verifying-library-behavior]].
 
 **Method.** Review the final state plus the whole-range diff, not the

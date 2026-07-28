@@ -41,11 +41,8 @@ data class TagEntry(
 @Repository
 class TagRepository : AbstractRepository<Tags, TagsRecord>(TAGS) {
 
-    // Pitfall 3: natural-key PK, so save() must check existence, not "id == 0"
     fun save(entry: TagEntry): TagEntry {
         val record = getOneBy { it.NAME.eq(entry.name) }?.apply {
-            // Pitfall 2: mutating a *fetched* record, then store()-ing it,
-            // correctly UPDATEs — this is not the same as newRec()+store().
             color = entry.color
             usageCount = entry.usageCount
         } ?: newRec().apply {
@@ -57,14 +54,23 @@ class TagRepository : AbstractRepository<Tags, TagsRecord>(TAGS) {
         return record.toEntry()
     }
 
-    // Pitfall 4: a real method the repository declares, so callers (tests
-    // included) never invoke the inherited final getOneBy directly.
     fun findByName(name: String): TagEntry? = getOneBy { it.NAME.eq(name) }?.toEntry()
 
-    // Pitfall 1: TagsRecord.getUsageCount() is boxed Integer; TagEntry.usageCount is Int.
     private fun TagsRecord.toEntry() = TagEntry(name = name, color = color, usageCount = usageCount ?: 0)
 }
 ```
+
+Where each pitfall shows up above:
+
+- **Pitfall 1** — `TagsRecord.getUsageCount()` is a boxed `Integer` while
+  `TagEntry.usageCount` is `Int`, hence the `?: 0` in `toEntry`.
+- **Pitfall 2** — `save` mutates a *fetched* record and then `store()`s it,
+  which correctly UPDATEs. That is not the same as `newRec()` + `store()`.
+- **Pitfall 3** — the PK is a natural key, so `save` checks existence by name
+  rather than testing `id == 0`.
+- **Pitfall 4** — `findByName` is a real method the repository declares, so
+  callers (tests included) never invoke the inherited final `getOneBy`
+  directly.
 
 ## Stages (each repository its own commit)
 

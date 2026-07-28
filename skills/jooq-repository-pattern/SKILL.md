@@ -199,15 +199,19 @@ The two shapes to watch for:
 
 **Reads — a per-parent query for children.**
 
+Wrong — one query for executions, then one more per execution:
+
 ```kotlin
-// Wrong: one query for executions, then one more per execution
 val executions = executionRepo.findByTaskId(taskId)
 val details = executions.map { execution ->
-    val steps = stepRepo.findByExecutionId(execution.id)   // N+1
+    val steps = stepRepo.findByExecutionId(execution.id)
     ...
 }
+```
 
-// Right: two queries total, grouped in Kotlin
+Right — two queries total, grouped in Kotlin:
+
+```kotlin
 val executions = executionRepo.findByTaskId(taskId)
 if (executions.isEmpty()) return emptyList()
 val stepsByExecution = stepRepo
@@ -244,8 +248,11 @@ checks the count at one N cannot tell a constant from a coincidence.
 *transaction boundary* — a reconciliation or batch job where each item is
 handled in its own transaction and individually error-guarded, so one bad item
 cannot roll back or abort the rest. Prefetching, or collapsing the sends into
-one batch, would destroy exactly that isolation. When you rely on it, say so in
-the KDoc, or someone will "optimise" it away.
+one batch, would destroy exactly that isolation. When you rely on it, put the
+isolation in the method name — `reconcileEachInOwnTransaction`, not
+`reconcileAll` — and the reasoning in the commit message, or someone will
+"optimise" it away. Not a comment: comments are banned, and a comment is the
+first thing deleted by the person doing the optimising.
 
 Note the exception is about *isolation*, not about convenience. "Each item needs
 its own call because the API has no batch form" is not the exception — that is

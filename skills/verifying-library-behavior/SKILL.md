@@ -1,6 +1,6 @@
 ---
 name: verifying-library-behavior
-description: Use when a claim about a third-party library's runtime behavior is load-bearing for correctness and is being inferred from documentation, annotations, or a method name rather than observed — before writing a comment, KDoc, or commit message that asserts how the library behaves.
+description: Use when a claim about a third-party library's runtime behavior is load-bearing for correctness and is being inferred from documentation, annotations, or a method name rather than observed — before writing a commit message, error string, or test name that asserts how the library behaves.
 ---
 
 # Verifying Library Behavior
@@ -9,10 +9,10 @@ Make "I checked" mean inspection, not inference.
 
 ## Core rule
 
-If your KDoc, commit message, code comment, or error string asserts a
-mechanism, you must have observed that mechanism. An assertion you have
-not verified is worse than silence: it survives into the codebase and
-the next reader trusts it.
+If your commit message, error string, test name, or MR description
+asserts a mechanism, you must have observed that mechanism. An assertion
+you have not verified is worse than silence: it survives into the
+codebase and the next reader trusts it.
 
 ## Techniques, cheapest first
 

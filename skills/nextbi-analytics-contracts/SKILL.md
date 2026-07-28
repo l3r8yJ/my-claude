@@ -88,8 +88,9 @@ Handled by `contracts-versioning-plugin` + a git **pre-commit** hook (installed 
 
 ## Consuming a contract in a service
 
+`settings.gradle.kts`:
+
 ```kotlin
-// settings.gradle.kts
 dependencyResolutionManagement {
     repositories {
         maven {
@@ -98,10 +99,16 @@ dependencyResolutionManagement {
         }
     }
 }
-// build.gradle.kts
-implementation("ru.nextbi.rest-api:{namespace}-core-<name>-service:1.2.0") // REST contract JAR
-implementation("ru.nextbi.kafka:<topic_name>:1.2.0")                       // Kafka contract JAR
 ```
+
+`build.gradle.kts`:
+
+```kotlin
+implementation("ru.nextbi.rest-api:{namespace}-core-<name>-service:1.2.0")
+implementation("ru.nextbi.kafka:<topic_name>:1.2.0")
+```
+
+The first is the REST contract JAR, the second the Kafka contract JAR.
 
 ## Doc-vs-reality gotchas
 

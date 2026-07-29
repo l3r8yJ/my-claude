@@ -207,7 +207,7 @@ test_skills_are_linked() {
               jooq-repository-pattern migrating-jpa-to-jooq-starter \
               nextbi-analytics-contracts verifying-library-behavior \
               writing-halt-gates-into-plans reviewing-across-task-seams \
-              feature-development; do
+              feature-development environment-scan; do
     ok "[ -L '${home}/.claude/skills/${name}' ]" "${name} should be symlinked"
     assert_eq "$(readlink "${home}/.claude/skills/${name}")" \
       "${REPO_DIR}/skills/${name}" "${name} should point into the repo"
@@ -252,6 +252,16 @@ test_foreign_rule_file_is_preserved_on_install() {
   rm -rf "${home}"
 }
 
+test_scan_script_runs() {
+  local out rc
+  out="$(bash "${REPO_DIR}/skills/environment-scan/scan.sh" 2>&1)"
+  rc=$?
+  assert_eq "${rc}" "0" "scan.sh should exit 0 even when tools are missing"
+  contains "${out}" "SCAN_VERSION" "report should carry the scan version"
+  contains "${out}" "## shell" "report should have a shell section"
+  not_contains "${out}" "BEGIN OPENSSH PRIVATE KEY" "scan must never emit key material"
+}
+
 main() {
   test_preflight_requires_jq
   test_hook_warns_on_pull_failure
@@ -265,6 +275,7 @@ main() {
   test_skills_are_linked
   test_foreign_skill_is_preserved
   test_foreign_rule_file_is_preserved_on_install
+  test_scan_script_runs
   printf '\n%d passed, %d failed\n' "${PASSED}" "${FAILED}"
   [ "${FAILED}" -eq 0 ]
 }

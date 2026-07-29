@@ -12,6 +12,7 @@ session:
 - `skills/verifying-library-behavior` — establishing what a library actually does, by inspection rather than inference
 - `skills/writing-halt-gates-into-plans` — stopping a planned task when its premise turns out to be false
 - `skills/reviewing-across-task-seams` — whole-branch review for defects that live between task scopes
+- `skills/feature-development` — driving a feature from description to merged branch, with hard gates between stages
 
 ## Requirements
 

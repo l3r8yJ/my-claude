@@ -3,7 +3,7 @@
 Personal Claude Code setup for Kotlin/Spring work, installed globally rather
 than per-project: one always-loaded `CLAUDE.md` of engineering conventions
 (Kotlin idioms, testing defaults, jOOQ and Kafka practice, a ban on
-comments), plus eleven skills that load on demand.
+comments), plus twelve skills that load on demand.
 
 `install.sh` symlinks both into `~/.claude/`, so a `git pull` in this clone
 updates every project at once. A `SessionStart` hook does that pull for you.
@@ -24,6 +24,7 @@ Guidance too narrow or example-heavy to keep loaded every session lives in
 | `writing-halt-gates-into-plans` | Authoring a plan whose task rests on an unverified premise — "this code is dead", "this is safe to delete" |
 | `reviewing-across-task-seams` | Reviewing a whole branch whose individual commits were already reviewed |
 | `driving-gitlab-ci-with-glab` | Finding the pipeline for a pushed commit, checking a stage, triggering a manual job through `glab`, or a pipeline for a known-good push appearing to be missing |
+| `porting-a-fix-across-diverged-branches` | Moving commits onto a branch whose layout has drifted, or a cherry-pick that failed with `modify/delete` |
 | `feature-development` | Building a new feature in a Kotlin/Spring service, from description to merged branch |
 | `environment-scan` | **Explicit ask only** — "scan my environment", "what tooling do I have" |
 
@@ -46,7 +47,7 @@ if either is missing. Everything else it assumes.
 
 ### superpowers
 
-The other ten skills stand alone. `feature-development` does not — it is a
+The other eleven skills stand alone. `feature-development` does not — it is a
 wrapper that hands each stage to a superpowers skill, so without the plugin
 installed it stalls at stage 2. Install it in Claude Code with:
 

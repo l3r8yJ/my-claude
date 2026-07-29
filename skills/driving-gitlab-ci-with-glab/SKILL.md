@@ -107,7 +107,8 @@ manual it looks.
 ## Waiting
 
 Poll in a bounded background loop until `success`, `failed` or `canceled`.
-Never block the session on a deploy.
+Never block the session on a deploy. For the shape of that loop — the
+deadline, the pre-sleep, terminal failure — see `reviewing-a-blocking-wait`.
 
 ## Common mistakes
 

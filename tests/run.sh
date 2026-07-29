@@ -52,6 +52,32 @@ not_contains() {
   esac
 }
 
+number_word() {
+  case "$1" in
+    1) printf 'one' ;;
+    2) printf 'two' ;;
+    3) printf 'three' ;;
+    4) printf 'four' ;;
+    5) printf 'five' ;;
+    6) printf 'six' ;;
+    7) printf 'seven' ;;
+    8) printf 'eight' ;;
+    9) printf 'nine' ;;
+    10) printf 'ten' ;;
+    11) printf 'eleven' ;;
+    12) printf 'twelve' ;;
+    13) printf 'thirteen' ;;
+    14) printf 'fourteen' ;;
+    15) printf 'fifteen' ;;
+    16) printf 'sixteen' ;;
+    17) printf 'seventeen' ;;
+    18) printf 'eighteen' ;;
+    19) printf 'nineteen' ;;
+    20) printf 'twenty' ;;
+    *) printf 'unsupported-count-%s' "$1" ;;
+  esac
+}
+
 fake_home() {
   local h
   h="$(mktemp -d)"
@@ -252,6 +278,25 @@ test_foreign_rule_file_is_preserved_on_install() {
   rm -rf "${home}"
 }
 
+test_skill_registry_counts_match_directory() {
+  local count word other_count other_word readme_intro claude_intro
+  count="$(find "${REPO_DIR}/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
+  word="$(number_word "${count}")"
+  other_count=$((count - 1))
+  other_word="$(number_word "${other_count}")"
+
+  readme_intro="$(sed -n '6p' "${REPO_DIR}/README.md")"
+  contains "${readme_intro}" "plus ${word} skills" \
+    "README.md line 6 should say 'plus ${word} skills' for ${count} skill directories"
+
+  claude_intro="$(sed -n '3p' "${REPO_DIR}/CLAUDE.md")"
+  contains "${claude_intro}" "ships ${word} on-demand skills" \
+    "CLAUDE.md line 3 should say 'ships ${word} on-demand skills' for ${count} skill directories"
+
+  contains "$(cat "${REPO_DIR}/README.md")" "The other ${other_word} skills stand alone" \
+    "README.md should say 'The other ${other_word} skills stand alone' for ${other_count} non-feature-development skills"
+}
+
 test_scan_script_runs() {
   local out rc
   out="$(bash "${REPO_DIR}/skills/environment-scan/scan.sh" 2>&1)"
@@ -275,6 +320,7 @@ main() {
   test_skills_are_linked
   test_foreign_skill_is_preserved
   test_foreign_rule_file_is_preserved_on_install
+  test_skill_registry_counts_match_directory
   test_scan_script_runs
   printf '\n%d passed, %d failed\n' "${PASSED}" "${FAILED}"
   [ "${FAILED}" -eq 0 ]

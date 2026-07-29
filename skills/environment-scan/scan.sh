@@ -88,7 +88,6 @@ scan_toolchains() {
     probe "${name}"
   done
   emit "JAVA_HOME: ${JAVA_HOME:-unset}"
-  emit "gradle-wrapper-in-cwd: $([ -x ./gradlew ] && echo yes || echo no)"
 }
 
 scan_containers() {

@@ -5,12 +5,19 @@ description: Use when building a new feature in a Kotlin/Spring service from a d
 
 # Feature Development
 
-**This skill supersedes bare `superpowers:brainstorming` as the entry point
-for feature work.** Brainstorming still runs — as stage 2 inside this
-chain, not as the first thing reached for. The stages before it exist
+**For feature work this skill runs instead of bare
+`superpowers:brainstorming`.** Brainstorming still runs — as stage 2 inside
+this chain, not as the first thing reached for. The stages before it exist
 because for a Kotlin/Spring service the same four dimensions decide the
 design every time, and a feature that silently skips one of them is where
 the rework comes from.
+
+A description field cannot stop another skill from firing, and
+`superpowers:using-superpowers` names brainstorming as the process skill
+that comes first. So expect both to match. **If brainstorming fires first
+on feature work, stop and restart here at stage 0** — its questions are a
+subset of stage 1's, and answering them twice is the failure this ordering
+exists to prevent.
 
 **Not this skill:** a bug fix (that is `superpowers:systematic-debugging`),
 a refactor that adds no observable behavior, a one-line config edit. Say so
@@ -24,14 +31,28 @@ and drop out rather than running five stages over a two-line change.
 | 1 | Interrogation | **Gate A** — brief approved |
 | 2 | Design | **Gate B** — spec approved |
 | 3 | Plan | **Gate C** — plan approved |
-| 4 | Build | **Gate D** — tests green, diff shown, nothing committed |
-| 5 | Close | commit, review, integration, retrospective |
+| 4 | Build | **Gate D** — tests green, branch diff shown, nothing merged or pushed |
+| 5 | Close | harvest, retrospective |
 
 Stage 2 delegates to `superpowers:brainstorming`, stage 3 to
 `superpowers:writing-plans`, stage 4 to
-`superpowers:subagent-driven-development`, stage 5 to
-`superpowers:requesting-code-review` and then
-`superpowers:finishing-a-development-branch`.
+`superpowers:subagent-driven-development`.
+
+**Know what the delegates already do, or you will run them twice.**
+Brainstorming ends by invoking `superpowers:writing-plans` itself — that
+*is* stage 3, so do not invoke it again when brainstorming returns.
+`subagent-driven-development` ends with a whole-branch review on the most
+capable model and then invokes
+`superpowers:finishing-a-development-branch` — that is the integration
+decision, so stage 5 does **not** re-run `requesting-code-review` or
+`finishing-a-development-branch`. Stage 5 owns only what no delegate
+covers: the harvest and the retrospective.
+
+**Hand stage 2 the brief.** Invoke brainstorming with the brief path and
+say the interrogation is already done. Without that it re-asks what stage 1
+answered, and a user who answers the same question twice stops trusting the
+chain. Its job here is design — architecture, components, data flow — not
+requirements.
 
 **Stage 0 is recon.** Read the repo before asking anything: build files,
 module layout, the code nearest the described feature. Inline, no
@@ -43,9 +64,13 @@ report for the user.
 At each gate, name the gate, show exactly what is being approved, and wait.
 
 A gate is never inferred as passed. Not from silence, not from an
-unrelated user message, not from "the next step is obvious anyway". Gate D
-specifically means the test command was **run**, its output shown, and the
-diff shown — before any `git commit`, not after.
+unrelated user message, not from "the next step is obvious anyway".
+
+Gate D means the test command was **run**, its output shown, and the
+whole-branch diff shown. Stage 4's implementers commit as they work — that
+is how `subagent-driven-development` operates and it is fine. What Gate D
+holds back is **integration**: nothing merged, nothing pushed, no PR
+opened until the user has seen the tests pass and the branch diff.
 
 A fifth halt is not positional. Any stage that discovers a premise from an
 earlier stage is false — code assumed dead turns out to have callers, an
@@ -89,6 +114,15 @@ before touching code.
 - On a different feature branch — **stop and ask.** Never branch off
   unrelated work by accident.
 
+**Repos with no ticket system.** Not every repo has one. Check before
+demanding a ticket: `git log --oneline -30`. If existing subjects carry
+scopes (`feat(PROJ-12):`), a ticket is required and asking for it is right.
+If none of them do, the repo has no ticket system — use a short kebab slug
+of the feature instead (`feature/outbox-relay`), and commit with a bare
+type (`feat: add the outbox relay`). **Never invent a ticket ID to satisfy
+the format**, and never block the chain waiting for one that does not
+exist. In that case the hard floor is the slug, not a ticket.
+
 ## Interrogation
 
 Order: **recon, then research, then ask.** Never ask the user what the
@@ -111,9 +145,10 @@ After recon, mark each seed *applies*, *skipped*, or *needs research*. The
 seeds are a floor, not a ceiling — generate feature-specific questions too.
 A pricing feature needs rounding and currency questions no seed covers.
 
-**Hard floor.** Two things are never skipped: the ticket ID, and the
-observable outcome that proves the feature works. Everything else is
-skippable *with a stated reason*.
+**Hard floor.** Two things are never skipped: the feature's identifier —
+its ticket ID, or a kebab slug where the repo has no ticket system, see
+`## Branch` — and the observable outcome that proves the feature works.
+Everything else is skippable *with a stated reason*.
 
 **Research dispatch.** Every *needs research* region becomes a subagent
 question, and all of them go out **in a single message** so they run in
@@ -140,11 +175,11 @@ about third-party library behavior that the design leans on goes through
 
 ## The brief
 
-`docs/superpowers/briefs/YYYY-MM-DD-TICKET-XXX.md`, in the repo where the
-feature is being built. It stays **untracked** — it is a brainstorming
-artifact. Before writing it, run `git check-ignore docs/superpowers/briefs`
-and, if the path is not ignored, add `docs/superpowers/` to `.gitignore`
-first.
+`docs/superpowers/briefs/YYYY-MM-DD-<identifier>.md`, in the repo where the
+feature is being built — the identifier being the ticket ID or the slug.
+It stays **untracked**: it is a brainstorming artifact. Before writing it,
+run `git check-ignore docs/superpowers/briefs` and, if the path is not
+ignored, add `docs/superpowers/` to `.gitignore` first.
 
 Written at Gate A, appended by later stages:
 
@@ -166,18 +201,25 @@ task reports keep their usual superpowers paths — `specs/`, `plans/`,
 `.superpowers/sdd/` — and the brief links to them, so one file indexes the
 chain.
 
-**Recovery.** On invocation, look for a brief matching the ticket. If one
-exists, read it, report which gates are already logged, and resume from the
-next stage rather than restarting the interrogation. This is why the brief
-is a file and not a section of context.
+**Recovery.** On invocation, glob for the identifier, not the full name —
+`docs/superpowers/briefs/*-TICKET-XXX.md`. The date prefix is the day the
+brief was created, so a chain resumed a week later will not match on
+today's. If a brief exists, read it, report which gates are already logged,
+and resume from the next stage rather than restarting the interrogation.
+This is why the brief is a file and not a section of context.
 
 ## Close
 
-Gate D passed means: commit under Conventional Commits scoped to the ticket
-(`feat(TICKET-123): …`), no mention of any AI tool. Then
-`superpowers:requesting-code-review`, then
+Stage 4's delegate already ran the whole-branch review and already invoked
 `superpowers:finishing-a-development-branch` for the integration decision.
-The brief gets its last gate-log line and stays untracked.
+Do not repeat either. Where the branch carried several tasks, add one pass
+with [[reviewing-across-task-seams]] — it hunts defects that live between
+task scopes, which the per-task reviews structurally cannot see.
+
+Every commit on the branch follows Conventional Commits, scoped to the
+ticket (`feat(TICKET-123): …`) or bare where the repo has no ticket system,
+with no mention of any AI tool. The brief gets its last gate-log line and
+stays untracked.
 
 ### Skill harvest
 
@@ -221,3 +263,9 @@ noise after every feature:
 live in the my-claude clone. Report the proposals and, if accepted, apply
 them in that clone as its own commits — never on the feature branch, which
 would smuggle unrelated edits into the merge request.
+
+Find the clone rather than guessing at it: this skill is installed as a
+symlink, so `readlink -f ~/.claude/skills/feature-development` resolves to
+`<clone>/skills/feature-development`. If that path is not a symlink, the
+install used a copy — ask for the clone path instead of searching the
+filesystem for it.

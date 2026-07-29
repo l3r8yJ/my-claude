@@ -1,6 +1,6 @@
 ---
 name: verifying-library-behavior
-description: Use when a claim about a third-party library's runtime behavior is load-bearing for correctness and is being inferred from documentation, annotations, or a method name rather than observed — before writing a commit message, error string, or test name that asserts how the library behaves.
+description: Use when a claim about runtime behavior is load-bearing for correctness and is being inferred from documentation, annotations, a method name, or a run of passing attempts rather than observed — before writing a commit message, error string, or test name that asserts a mechanism.
 ---
 
 # Verifying Library Behavior
@@ -19,7 +19,15 @@ codebase and the next reader trusts it.
 Escalate only as far as the claim requires. Most claims settle at step
 1 or 2.
 
-1. `javap -p` on the jar from the dependency cache. Settles signatures,
+1. Ask the running system, when one is reachable. It outranks the
+   artifact, and it is one request — but only once the deployment is
+   confirmed to be the same build as the artifact under discussion; a
+   service running an older release settles nothing about the code on
+   disk. Judge by status and headers, never the body: a single-page-app
+   catch-all answers unknown paths with 200 and HTML, so an endpoint
+   that does not exist looks like one that works.
+
+2. `javap -p` on the jar from the dependency cache. Settles signatures,
    `final`, `vararg`, generic bounds. Often sufficient and takes
    seconds.
 
@@ -28,27 +36,26 @@ Escalate only as far as the claim requires. Most claims settle at step
      com.example.SomeClass
    ```
 
-2. Decompile when control flow matters — which branch a method takes,
-   what a short-circuit returns, whether an overload delegates.
-3. Render the actual output. For a query builder, log or render the
+3. Decompile when control flow matters — which branch a method takes,
+   whether an overload delegates.
+4. Render the actual output. For a query builder, log or render the
    SQL rather than trusting method names; for a serializer, print the
    payload.
-4. Read generated sources, not the annotations that produced them.
+5. Read generated sources, not the annotations that produced them.
    Annotation-processor output under `build/generated/**` is what
    runs; the annotations are a request.
-5. Build a throwaway harness reproducing the failure mode, when the
-   claim is about behavior under conditions your tests do not create —
-   pooling, concurrency, ordering, empty inputs.
+6. Build a throwaway harness reproducing the failure mode, for behavior
+   under conditions your tests do not create — pooling, concurrency,
+   ordering, empty inputs.
 
 ## When it is worth it
 
 Not every call. The trigger is load-bearing *and* inferred: the answer
-changes what you write, and you have not seen it happen. Two
-supporting signals raise the odds it is worth the minute it costs: the
-library sits between your code and something external (a database, a
-wire format), or an emulation or compatibility layer is involved,
-where the documented API and the executed behavior are deliberately
-different things.
+changes what you write, and you have not seen it happen. Two signals
+raise the odds it earns the minute it costs: the library sits between
+your code and something external, or an emulation or compatibility
+layer is involved — cases where documented and executed behavior
+deliberately differ.
 
 ## Anti-pattern
 
@@ -57,25 +64,28 @@ finding no difference. An equivalence claim needs a case where they
 *would* differ, tried. Reading proves only that you found no
 difference — it does not prove there is none.
 
+Concluding "that was noise" from a run of passing attempts. A rare
+failure is evidence of a narrow window, not of noise — settle it with a
+deterministic probe of the invariant, not a longer series. If "this is
+noise" changes what you write or what you fix, it needs a probe.
+
 ## Worked examples
 
-- A method looked like it took a single lambda; `javap` showed
-  `vararg`, so trailing-lambda syntax could not compile. Prevented a
-  "cleanup" that would have failed at twelve call sites.
-- A pagination helper was assumed to compute totals independently of
-  the returned rows; decompiling showed it short-circuits to an empty
-  page, so any out-of-range page reported a zero total. This was a
-  live regression.
 - A builder call named `returningResult` was assumed to emit a
   `RETURNING` clause; rendering the SQL showed an emulation on a
   different mechanism. The behavior was correct; every comment
   describing it was wrong.
-- A build plugin was assumed to filter tests by filename pattern;
-  unzipping and disassembling it showed no such filter, dissolving a
-  whole category of feared breakage.
 - Mapper annotations were assumed to describe the mapping; reading the
   generated implementation showed which fields were actually read,
   settling whether a fixture change could affect assertions.
 - A connection-scoped id lookup was assumed safe; a throwaway
   round-robin connection provider reproduced the wrong-id failure in
   three lines and proved the fix.
+- An endpoint's HTTP method was inferred by pairing a path constant with
+  a method constant from the same disassembled interface. The pairing was
+  wrong and the request returned 405; the response's `Allow` header had
+  named the method all along.
+- A stress test failing once in roughly a dozen runs was dismissed as a
+  shared-mock artifact. A three-line deterministic probe showed the
+  production code handed out a borrow on a closed resource, turning a
+  dismissed flake into a confirmed race.

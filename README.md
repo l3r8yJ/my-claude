@@ -20,7 +20,7 @@ Guidance too narrow or example-heavy to keep loaded every session lives in
 | `jooq-repository-pattern` | Writing or reviewing a jOOQ repository on `jooq-starter`, or configuring `jooqCodegen` |
 | `migrating-jpa-to-jooq-starter` | Replacing a JPA `@Entity`/`JpaRepository` with a jOOQ one, or debugging the failures that migration causes |
 | `nextbi-analytics-contracts` | Working in the NextBI analytics contracts repo — OpenAPI or Kafka contracts, codegen, versioning |
-| `verifying-library-behavior` | A claim about a library's runtime behavior is load-bearing and inferred from docs rather than observed |
+| `verifying-library-behavior` | A load-bearing claim about runtime behavior — a library, a running service, or concurrent code — is inferred rather than observed |
 | `writing-halt-gates-into-plans` | Authoring a plan whose task rests on an unverified premise — "this code is dead", "this is safe to delete" |
 | `reviewing-across-task-seams` | Reviewing a whole branch whose individual commits were already reviewed |
 | `driving-gitlab-ci-with-glab` | Finding the pipeline for a pushed commit, checking a stage, triggering a manual job through `glab`, or a pipeline for a known-good push appearing to be missing |

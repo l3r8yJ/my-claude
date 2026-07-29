@@ -1,8 +1,17 @@
 # my-claude
 
-Shared `CLAUDE.md` engineering guidance for Kotlin projects, plus global
-skills for guidance that's too narrow or example-heavy to keep loaded every
-session:
+Personal Claude Code setup for Kotlin/Spring work, installed globally rather
+than per-project: one always-loaded `CLAUDE.md` of engineering conventions
+(Kotlin idioms, testing defaults, jOOQ and Kafka practice, a ban on
+comments), plus ten skills that load on demand.
+
+`install.sh` symlinks both into `~/.claude/`, so a `git pull` in this clone
+updates every project at once. A `SessionStart` hook does that pull for you.
+
+## Skills
+
+Guidance too narrow or example-heavy to keep loaded every session lives in
+`skills/` instead:
 
 | Skill | Fires when |
 | --- | --- |
@@ -22,8 +31,30 @@ All of these fire automatically when the situation matches, except
 
 ## Requirements
 
-`bash`, `git`, and `jq`. The installer checks for `git` and `jq` and exits
-without changing anything if either is missing.
+| What | Why | Checked by installer |
+| --- | --- | --- |
+| [Claude Code](https://github.com/anthropics/claude-code) | Reads `~/.claude/rules/` and `~/.claude/skills/`; nothing here does anything without it | no |
+| `bash` | Runs `install.sh` and `tests/run.sh` | no — it's the interpreter |
+| `git` | The `SessionStart` hook pulls this repo before each session | yes, exits if missing |
+| `jq` | Edits `~/.claude/settings.json` to wire that hook | yes, exits if missing |
+| [superpowers](https://github.com/obra/superpowers) | `feature-development` delegates its stages to `superpowers:brainstorming`, `writing-plans`, `subagent-driven-development` and `finishing-a-development-branch` | no |
+| intellij-index MCP | Optional. The guidance prefers its symbol lookup and rename tools over text search; without it, Claude falls back to `rg` | no |
+
+The installer checks only `git` and `jq`, and exits without changing anything
+if either is missing. Everything else it assumes.
+
+### superpowers
+
+The other nine skills stand alone. `feature-development` does not — it is a
+wrapper that hands each stage to a superpowers skill, so without the plugin
+installed it stalls at stage 2. Install it in Claude Code with:
+
+```
+/plugin install superpowers@claude-plugins-official
+```
+
+Skip it if you don't want `feature-development`; the rest of this repo works
+either way.
 
 ## Install
 

@@ -4,15 +4,21 @@ Shared `CLAUDE.md` engineering guidance for Kotlin projects, plus global
 skills for guidance that's too narrow or example-heavy to keep loaded every
 session:
 
-- `skills/kotlin-test-writing-rules` — jtcop rule conventions for JUnit5 test classes
-- `skills/mapstruct-converter-conventions` — Spring `Converter`/MapStruct/`ConversionService` conventions
-- `skills/jooq-repository-pattern` — jOOQ data access on `jooq-starter` (repository per table, pagination, Liquibase codegen)
-- `skills/migrating-jpa-to-jooq-starter` — replacing Spring Data JPA entities and repositories with `jooq-starter` equivalents
-- `skills/nextbi-analytics-contracts` — working in the NextBI analytics contracts repo (OpenAPI/Kafka contract-first, codegen, versioning)
-- `skills/verifying-library-behavior` — establishing what a library actually does, by inspection rather than inference
-- `skills/writing-halt-gates-into-plans` — stopping a planned task when its premise turns out to be false
-- `skills/reviewing-across-task-seams` — whole-branch review for defects that live between task scopes
-- `skills/feature-development` — driving a feature from description to merged branch, with hard gates between stages
+| Skill | Fires when |
+| --- | --- |
+| `kotlin-test-writing-rules` | Writing or reviewing a Kotlin JUnit5 test class |
+| `mapstruct-converter-conventions` | Writing a Spring `Converter` or MapStruct mapper, or calling `ConversionService` |
+| `jooq-repository-pattern` | Writing or reviewing a jOOQ repository on `jooq-starter`, or configuring `jooqCodegen` |
+| `migrating-jpa-to-jooq-starter` | Replacing a JPA `@Entity`/`JpaRepository` with a jOOQ one, or debugging the failures that migration causes |
+| `nextbi-analytics-contracts` | Working in the NextBI analytics contracts repo — OpenAPI or Kafka contracts, codegen, versioning |
+| `verifying-library-behavior` | A claim about a library's runtime behavior is load-bearing and inferred from docs rather than observed |
+| `writing-halt-gates-into-plans` | Authoring a plan whose task rests on an unverified premise — "this code is dead", "this is safe to delete" |
+| `reviewing-across-task-seams` | Reviewing a whole branch whose individual commits were already reviewed |
+| `feature-development` | Building a new feature in a Kotlin/Spring service, from description to merged branch |
+| `environment-scan` | **Explicit ask only** — "scan my environment", "what tooling do I have" |
+
+All of these fire automatically when the situation matches, except
+`environment-scan`, which runs only when asked.
 
 ## Requirements
 

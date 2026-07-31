@@ -243,6 +243,99 @@ The `it/` package must not exist in `src/main/kotlin`.
 
 ---
 
+## 9. No Resource Cleanup Inside Tests
+
+A test body must not manage a resource lifecycle. No `try { ... } finally { x.close() }`, no `.use { }`, no hand-rolled teardown. If a test needs a resource open, something other than the test body owns it.
+
+This is about test bodies only. `.use { }` in production code is correct and preferred — see the Kotlin idioms in `CLAUDE.md`.
+
+Three reasons the plumbing does not belong in the body:
+
+- Rule 1 bans non-`@Test` methods, so cleanup cannot be factored into an `@AfterEach`. The only in-class place left is the body itself, which duplicates the plumbing across every test until one test forgets it and leaks into the whole JVM run.
+- Cleanup plumbing buries the assertion the test exists for.
+- JUnit closes a `Store`-registered `CloseableResource` even when the test aborts, times out, or the class fails in `@BeforeAll`. A `finally` inside one body covers only that body.
+
+Wrong — manual `try/finally`:
+
+```kotlin
+class GreetingsITCase {
+    @Test
+    fun `serves greeting over http`() {
+        val server = EmbeddedServer(port = 0).also { it.start() }
+        try {
+            assertThat(server.get("/greeting"), name = "greeting body")
+                .isEqualTo("Hello, world!")
+        } finally {
+            server.close()
+        }
+    }
+}
+```
+
+Wrong — `.use { }` is the same plumbing with nicer syntax:
+
+```kotlin
+class GreetingsITCase {
+    @Test
+    fun `serves greeting over http`() {
+        EmbeddedServer(port = 0).use { server ->
+            server.start()
+            assertThat(server.get("/greeting"), name = "greeting body")
+                .isEqualTo("Hello, world!")
+        }
+    }
+}
+```
+
+Correct — an extension owns the server, the body is assertion only:
+
+```kotlin
+@ExtendWith(EmbeddedServerExtension::class)
+class GreetingsITCase {
+    @Test
+    fun `serves greeting over http`(server: EmbeddedServer) {
+        assertThat(server.get("/greeting"), name = "greeting body")
+            .isEqualTo("Hello, world!")
+    }
+}
+```
+
+The extension lives in `src/test/kotlin/foo/support/` (rule 7's fallback package), implements `ParameterResolver` to hand the server to the test, and registers it in the `ExtensionContext.Store` so JUnit closes it:
+
+```kotlin
+class EmbeddedServerExtension : ParameterResolver {
+    override fun supportsParameter(parameter: ParameterContext, context: ExtensionContext) =
+        parameter.parameter.type == EmbeddedServer::class.java
+
+    override fun resolveParameter(parameter: ParameterContext, context: ExtensionContext): EmbeddedServer =
+        context.getStore(Namespace.create(EmbeddedServerExtension::class.java))
+            .getOrComputeIfAbsent(
+                "server",
+                { CloseableServer(EmbeddedServer(port = 0).also { it.start() }) },
+                CloseableServer::class.java,
+            )
+            .server
+}
+
+class CloseableServer(val server: EmbeddedServer) : ExtensionContext.Store.CloseableResource {
+    override fun close() = server.close()
+}
+```
+
+Where each kind of resource goes:
+
+| Resource                       | Owner                                                                                   |
+|--------------------------------|-----------------------------------------------------------------------------------------|
+| temp file or directory         | `@TempDir`                                                                              |
+| Postgres, Kafka, any container | Testcontainers singleton base class + `@ServiceConnection` (see Testing Infrastructure Notes) |
+| beans, pools, connections      | Spring test context — `@SpringBootTest` closes them                                     |
+| any other `AutoCloseable`      | JUnit 5 extension (`AfterEachCallback`), or `ExtensionContext.Store` as `CloseableResource` |
+| built-up test data             | fake object (rule 7)                                                                    |
+
+There is no exception for a test whose subject is `close()` itself. Register the resource with tooling and assert on observable state — open-connection count, released lock, a closed flag — rather than closing it inline.
+
+---
+
 ## Directory Layout
 
 ```
@@ -332,3 +425,4 @@ To enforce the structural rules above (test classes contain only `@Test` methods
 | No size limit on test classes  | 5000 lines is fine                                           |
 | Fake objects for shared setup  | Live in `src/main/kotlin`, ship with production code         |
 | Integration tests use `ITCase` | Cross-class ones go in `it/` sub-package                     |
+| No cleanup in test bodies      | No `try/finally`, no `.use {}` — tooling owns resources       |

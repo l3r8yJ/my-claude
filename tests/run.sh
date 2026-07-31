@@ -182,7 +182,24 @@ test_fresh_install_links_rule_file() {
   ok "[ -L '${home}/.claude/rules/kotlin-spring.md' ]" "rule file should be a symlink"
   assert_eq "$(readlink "${home}/.claude/rules/kotlin-spring.md")" \
     "${REPO_DIR}/CLAUDE.md" "rule symlink should point at the repo CLAUDE.md"
+  ok "[ -L '${home}/.claude/rules/rust.md' ]" "rust rule file should be a symlink"
+  assert_eq "$(readlink "${home}/.claude/rules/rust.md")" \
+    "${REPO_DIR}/RUST.md" "rust rule symlink should point at the repo RUST.md"
   no "[ -e '${home}/.claude/CLAUDE.md' ]" "install must not create ~/.claude/CLAUDE.md"
+  rm -rf "${home}"
+}
+
+# A collision on one rule file must not stop the other from being linked.
+test_rule_files_are_independent() {
+  local home marker
+  home="$(fake_home)"
+  mkdir -p "${home}/.claude/rules"
+  printf 'mine\n' > "${home}/.claude/rules/rust.md"
+  run_install "${home}"
+  marker="$(cat "${home}/.claude/rules/rust.md")"
+  assert_eq "${marker}" "mine" "user's own rust rule file must be unchanged"
+  ok "[ -L '${home}/.claude/rules/kotlin-spring.md' ]" \
+    "the Kotlin rule should still be linked after a Rust rule collision"
   rm -rf "${home}"
 }
 
@@ -217,10 +234,14 @@ test_falls_back_to_import_when_symlink_unavailable() {
   run_install "${home}"
   ok "[ -f '${home}/.claude/CLAUDE.md' ]" "fallback should create ~/.claude/CLAUDE.md"
   ok "grep -qxF '@${REPO_DIR}/CLAUDE.md' '${home}/.claude/CLAUDE.md'" \
-    "fallback should append the import line"
+    "fallback should append the Kotlin import line"
+  ok "grep -qxF '@${REPO_DIR}/RUST.md' '${home}/.claude/CLAUDE.md'" \
+    "fallback should append the Rust import line"
   run_install "${home}"
   count="$(grep -cxF "@${REPO_DIR}/CLAUDE.md" "${home}/.claude/CLAUDE.md")"
-  assert_eq "${count}" "1" "import line must not be duplicated on re-run"
+  assert_eq "${count}" "1" "Kotlin import line must not be duplicated on re-run"
+  count="$(grep -cxF "@${REPO_DIR}/RUST.md" "${home}/.claude/CLAUDE.md")"
+  assert_eq "${count}" "1" "Rust import line must not be duplicated on re-run"
   chmod 700 "${home}/.claude/rules"
   rm -rf "${home}"
 }
@@ -233,7 +254,10 @@ test_skills_are_linked() {
               jooq-repository-pattern migrating-jpa-to-jooq-starter \
               nextbi-analytics-contracts verifying-library-behavior \
               writing-halt-gates-into-plans reviewing-across-task-seams \
-              feature-development environment-scan; do
+              feature-development environment-scan \
+              rust-error-handling rust-test-writing-rules \
+              rust-async-service-conventions rust-sqlx-repository-pattern \
+              rust-cli-conventions; do
     ok "[ -L '${home}/.claude/skills/${name}' ]" "${name} should be symlinked"
     assert_eq "$(readlink "${home}/.claude/skills/${name}")" \
       "${REPO_DIR}/skills/${name}" "${name} should point into the repo"
@@ -279,22 +303,39 @@ test_foreign_rule_file_is_preserved_on_install() {
 }
 
 test_skill_registry_counts_match_directory() {
-  local count word other_count other_word readme_intro claude_intro
-  count="$(find "${REPO_DIR}/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
-  word="$(number_word "${count}")"
-  other_count=$((count - 1))
-  other_word="$(number_word "${other_count}")"
+  local total rust kotlin total_word rust_word kotlin_word other_word readme claude_intro rust_intro
+  total="$(find "${REPO_DIR}/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
+  rust="$(find "${REPO_DIR}/skills" -mindepth 1 -maxdepth 1 -type d -name 'rust-*' | wc -l | tr -d ' ')"
+  kotlin=$((total - rust))
+  total_word="$(number_word "${total}")"
+  rust_word="$(number_word "${rust}")"
+  kotlin_word="$(number_word "${kotlin}")"
+  other_word="$(number_word $((total - 1)))"
 
-  readme_intro="$(sed -n '6p' "${REPO_DIR}/README.md")"
-  contains "${readme_intro}" "plus ${word} skills" \
-    "README.md line 6 should say 'plus ${word} skills' for ${count} skill directories"
+  readme="$(cat "${REPO_DIR}/README.md")"
+  contains "${readme}" "plus ${total_word} skills" \
+    "README.md should say 'plus ${total_word} skills' for ${total} skill directories"
+  contains "${readme}" "The other ${other_word} skills stand alone" \
+    "README.md should say 'The other ${other_word} skills stand alone' for $((total - 1)) non-feature-development skills"
 
   claude_intro="$(sed -n '3p' "${REPO_DIR}/CLAUDE.md")"
-  contains "${claude_intro}" "ships ${word} on-demand skills" \
-    "CLAUDE.md line 3 should say 'ships ${word} on-demand skills' for ${count} skill directories"
+  contains "${claude_intro}" "ships ${kotlin_word} on-demand skills" \
+    "CLAUDE.md line 3 should say 'ships ${kotlin_word} on-demand skills' for ${kotlin} non-Rust skill directories"
 
-  contains "$(cat "${REPO_DIR}/README.md")" "The other ${other_word} skills stand alone" \
-    "README.md should say 'The other ${other_word} skills stand alone' for ${other_count} non-feature-development skills"
+  rust_intro="$(sed -n '3p' "${REPO_DIR}/RUST.md")"
+  contains "${rust_intro}" "ships ${rust_word} on-demand Rust skills" \
+    "RUST.md line 3 should say 'ships ${rust_word} on-demand Rust skills' for ${rust} rust-* skill directories"
+}
+
+# A skill whose frontmatter name does not match its directory never loads.
+test_every_skill_declares_its_own_name() {
+  local skill_src name declared
+  for skill_src in "${REPO_DIR}"/skills/*/; do
+    name="$(basename "${skill_src}")"
+    ok "[ -f '${skill_src}SKILL.md' ]" "${name} should contain a SKILL.md"
+    declared="$(sed -n 's/^name: *//p' "${skill_src}SKILL.md" | head -1)"
+    assert_eq "${declared}" "${name}" "${name}/SKILL.md frontmatter name should match its directory"
+  done
 }
 
 test_scan_script_runs() {
@@ -314,6 +355,7 @@ main() {
   test_hook_preserves_sibling_repo_entry
   test_install_refuses_non_array_session_start
   test_fresh_install_links_rule_file
+  test_rule_files_are_independent
   test_existing_user_claude_md_is_untouched
   test_legacy_symlink_is_migrated
   test_falls_back_to_import_when_symlink_unavailable
@@ -321,6 +363,7 @@ main() {
   test_foreign_skill_is_preserved
   test_foreign_rule_file_is_preserved_on_install
   test_skill_registry_counts_match_directory
+  test_every_skill_declares_its_own_name
   test_scan_script_runs
   printf '\n%d passed, %d failed\n' "${PASSED}" "${FAILED}"
   [ "${FAILED}" -eq 0 ]

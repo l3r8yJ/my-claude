@@ -1,9 +1,11 @@
 # my-claude
 
-Personal Claude Code setup for Kotlin/Spring work, installed globally rather
-than per-project: one always-loaded `CLAUDE.md` of engineering conventions
-(Kotlin idioms, testing defaults, jOOQ and Kafka practice, a ban on
-comments), plus thirteen skills that load on demand.
+Personal Claude Code setup for Kotlin/Spring and Rust work, installed globally
+rather than per-project: two always-loaded convention files — `CLAUDE.md`
+(Kotlin idioms, testing defaults, jOOQ and Kafka practice, a ban on comments)
+and `RUST.md` (ownership and panic discipline, toolchain policy, the same
+comment ban with one carve-out for public `///` docs) — plus eighteen skills
+that load on demand.
 
 `install.sh` symlinks both into `~/.claude/`, so a `git pull` in this clone
 updates every project at once. A `SessionStart` hook does that pull for you.
@@ -13,6 +15,8 @@ updates every project at once. A `SessionStart` hook does that pull for you.
 Guidance too narrow or example-heavy to keep loaded every session lives in
 `skills/` instead:
 
+### Kotlin / Spring
+
 | Skill | Fires when |
 | --- | --- |
 | `kotlin-test-writing-rules` | Writing or reviewing a Kotlin JUnit5 test class |
@@ -20,13 +24,28 @@ Guidance too narrow or example-heavy to keep loaded every session lives in
 | `jooq-repository-pattern` | Writing or reviewing a jOOQ repository on `jooq-starter`, or configuring `jooqCodegen` |
 | `migrating-jpa-to-jooq-starter` | Replacing a JPA `@Entity`/`JpaRepository` with a jOOQ one, or debugging the failures that migration causes |
 | `nextbi-analytics-contracts` | Working in the NextBI analytics contracts repo — OpenAPI or Kafka contracts, codegen, versioning |
+| `feature-development` | Building a new feature in a Kotlin/Spring service, from description to merged branch |
+
+### Rust
+
+| Skill | Fires when |
+| --- | --- |
+| `rust-error-handling` | Designing an error type, choosing `thiserror` vs `anyhow`, or a signature returning `String`/`Box<dyn Error>` where a typed error belongs |
+| `rust-test-writing-rules` | Writing or reviewing a Rust test — placement, naming, async, testcontainers, controlling time |
+| `rust-async-service-conventions` | Building or reviewing a tokio/axum service — state, middleware order, tracing, shutdown, cancellation safety |
+| `rust-sqlx-repository-pattern` | Writing database access with `sqlx` — repositories, checked queries, transactions, migrations, batching |
+| `rust-cli-conventions` | Building a command-line tool — `clap`, exit codes, stdout/stderr discipline, distribution |
+
+### Cross-cutting
+
+| Skill | Fires when |
+| --- | --- |
 | `verifying-library-behavior` | A load-bearing claim about runtime behavior — a library, a running service, or concurrent code — is inferred rather than observed |
 | `writing-halt-gates-into-plans` | Authoring a plan whose task rests on an unverified premise — "this code is dead", "this is safe to delete" |
 | `reviewing-across-task-seams` | Reviewing a whole branch whose individual commits were already reviewed |
 | `driving-gitlab-ci-with-glab` | Finding the pipeline for a pushed commit, checking a stage, triggering a manual job through `glab`, or a pipeline for a known-good push appearing to be missing |
 | `porting-a-fix-across-diverged-branches` | Moving commits onto a branch whose layout has drifted, or a cherry-pick that failed with `modify/delete` |
 | `reviewing-a-blocking-wait` | A poll loop with a sleep in its body, being written or read in a diff |
-| `feature-development` | Building a new feature in a Kotlin/Spring service, from description to merged branch |
 | `environment-scan` | **Explicit ask only** — "scan my environment", "what tooling do I have" |
 
 All of these fire automatically when the situation matches, except
@@ -47,7 +66,7 @@ if either is missing. Everything else it assumes.
 
 ### superpowers
 
-The other twelve skills stand alone. `feature-development` does not — it is a
+The other seventeen skills stand alone. `feature-development` does not — it is a
 wrapper that hands each stage to a superpowers skill, so without the plugin
 installed it stalls at stage 2. Install it in Claude Code with:
 
@@ -68,11 +87,12 @@ cd my-claude
 
 This does three things:
 
-- Links `CLAUDE.md` into `~/.claude/rules/kotlin-spring.md`, so the guidance
-  loads in every session **without touching your own `~/.claude/CLAUDE.md`**.
-  If your system does not support symlinks (Windows without Developer Mode),
-  it instead appends a single `@.../CLAUDE.md` import line to your
-  `~/.claude/CLAUDE.md`, creating that file only if it does not exist.
+- Links `CLAUDE.md` into `~/.claude/rules/kotlin-spring.md` and `RUST.md` into
+  `~/.claude/rules/rust.md`, so both load in every session **without touching
+  your own `~/.claude/CLAUDE.md`**. If your system does not support symlinks
+  (Windows without Developer Mode), it instead appends one `@.../CLAUDE.md`
+  and one `@.../RUST.md` import line to your `~/.claude/CLAUDE.md`, creating
+  that file only if it does not exist.
 - Links each directory under `skills/` into `~/.claude/skills/`.
 - Adds a Claude Code `SessionStart` hook that runs `git pull --ff-only` in
   this repo before each session, so you get the latest guidance
@@ -97,10 +117,11 @@ There is no uninstall script — run these steps by hand, in this order. Set
 REPO=/path/to/your/clone/of/my-claude
 ```
 
-1. Remove the rule symlink, but only if it still points into this clone:
+1. Remove the rule symlinks, but only if they still point into this clone:
 
    ```
    [ "$(readlink ~/.claude/rules/kotlin-spring.md 2>/dev/null)" = "$REPO/CLAUDE.md" ] && rm ~/.claude/rules/kotlin-spring.md
+   [ "$(readlink ~/.claude/rules/rust.md 2>/dev/null)" = "$REPO/RUST.md" ] && rm ~/.claude/rules/rust.md
    ```
 
 2. Remove the skill symlinks under `~/.claude/skills/`:
@@ -113,12 +134,13 @@ REPO=/path/to/your/clone/of/my-claude
    done
    ```
 
-3. If the symlink fallback wasn't available and install appended an import
-   line to `~/.claude/CLAUDE.md` instead, strip just that line:
+3. If the symlink fallback wasn't available and install appended import
+   lines to `~/.claude/CLAUDE.md` instead, strip just those lines:
 
    ```
    if [ -f ~/.claude/CLAUDE.md ] && [ ! -L ~/.claude/CLAUDE.md ]; then
-     grep -vxF "@$REPO/CLAUDE.md" ~/.claude/CLAUDE.md > /tmp/claude-md.tmp
+     grep -vxF "@$REPO/CLAUDE.md" ~/.claude/CLAUDE.md \
+       | grep -vxF "@$REPO/RUST.md" > /tmp/claude-md.tmp
      mv /tmp/claude-md.tmp ~/.claude/CLAUDE.md
    fi
    ```

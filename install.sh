@@ -10,9 +10,9 @@ CLAUDE_DIR="${HOME}/.claude"
 CLAUDE_MD="${CLAUDE_DIR}/CLAUDE.md"
 RULES_DIR="${CLAUDE_DIR}/rules"
 RULE_FILE="${RULES_DIR}/kotlin-spring.md"
+RUST_RULE_FILE="${RULES_DIR}/rust.md"
 SKILLS_DIR="${CLAUDE_DIR}/skills"
 SETTINGS="${CLAUDE_DIR}/settings.json"
-IMPORT_LINE="@${REPO_DIR}/CLAUDE.md"
 PULL_CMD="git -C \"${REPO_DIR}\" pull --ff-only --quiet || echo \"my-claude: update failed (local commits or no network); guidance may be stale — check: git -C ${REPO_DIR} status\""
 
 for tool in git jq; do
@@ -30,33 +30,37 @@ symlink_points_to() {
   [ -L "$1" ] && [ "$(readlink "$1")" = "$2" ]
 }
 
+# append_import IMPORT_LINE
 append_import() {
-  if [ -f "${CLAUDE_MD}" ] && grep -qxF "${IMPORT_LINE}" "${CLAUDE_MD}"; then
+  local line="$1"
+  if [ -f "${CLAUDE_MD}" ] && grep -qxF "${line}" "${CLAUDE_MD}"; then
     echo "Import already present in ${CLAUDE_MD}"
     return 0
   fi
   if [ -s "${CLAUDE_MD}" ] && [ -n "$(tail -c 1 "${CLAUDE_MD}")" ]; then
     printf '\n' >> "${CLAUDE_MD}"
   fi
-  printf '%s\n' "${IMPORT_LINE}" >> "${CLAUDE_MD}"
-  echo "Added import to ${CLAUDE_MD}: ${IMPORT_LINE}"
+  printf '%s\n' "${line}" >> "${CLAUDE_MD}"
+  echo "Added import to ${CLAUDE_MD}: ${line}"
 }
 
+# attach_guidance SOURCE_FILE RULE_FILE
 attach_guidance() {
-  if symlink_points_to "${RULE_FILE}" "${REPO_DIR}/CLAUDE.md"; then
-    echo "Already linked: ${RULE_FILE} -> ${REPO_DIR}/CLAUDE.md"
+  local source="$1" rule="$2"
+  if symlink_points_to "${rule}" "${source}"; then
+    echo "Already linked: ${rule} -> ${source}"
     return 0
   fi
-  if [ -e "${RULE_FILE}" ] || [ -L "${RULE_FILE}" ]; then
-    echo "warning: ${RULE_FILE} exists and was not created by this repo — skipping. Remove it and re-run to link this guidance." >&2
+  if [ -e "${rule}" ] || [ -L "${rule}" ]; then
+    echo "warning: ${rule} exists and was not created by this repo — skipping. Remove it and re-run to link this guidance." >&2
     return 0
   fi
-  if ln -s "${REPO_DIR}/CLAUDE.md" "${RULE_FILE}" 2> /dev/null; then
-    echo "Symlinked ${RULE_FILE} -> ${REPO_DIR}/CLAUDE.md"
+  if ln -s "${source}" "${rule}" 2> /dev/null; then
+    echo "Symlinked ${rule} -> ${source}"
     return 0
   fi
   echo "Symlinks unavailable here — falling back to a CLAUDE.md import."
-  append_import
+  append_import "@${source}"
 }
 
 if symlink_points_to "${CLAUDE_MD}" "${REPO_DIR}/CLAUDE.md"; then
@@ -64,7 +68,8 @@ if symlink_points_to "${CLAUDE_MD}" "${REPO_DIR}/CLAUDE.md"; then
   echo "Removed legacy symlink ${CLAUDE_MD}; guidance now loads from ${RULE_FILE}"
 fi
 
-attach_guidance
+attach_guidance "${REPO_DIR}/CLAUDE.md" "${RULE_FILE}"
+attach_guidance "${REPO_DIR}/RUST.md" "${RUST_RULE_FILE}"
 
 mkdir -p "${SKILLS_DIR}"
 

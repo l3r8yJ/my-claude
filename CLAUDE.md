@@ -4,7 +4,6 @@ This repo also ships thirteen on-demand skills — `kotlin-test-writing-rules`, 
 
 IMPORTANT:
 
-- When applicable, prefer using intellij-index MCP tools for code navigation, symbol lookup, usage search, and safe refactoring.
 - Prefer minimal, targeted changes over broad rewrites.
 - Preserve the existing project style unless there is a clear reason to change it.
 - Do not mention Claude, Anthropic, or any AI tool in commit messages, PR descriptions, or code comments — no `Co-Authored-By: Claude`, no "Generated with Claude Code", no similar attribution.
@@ -131,8 +130,6 @@ IMPORTANT:
 
 ## Refactoring and code navigation
 
-- When searching usages, symbols, or performing safe refactoring in Kotlin/Java codebases, prefer intellij-index MCP tools over plain text
-  search when available.
 - Prefer targeted edits over rewriting whole files unnecessarily.
 - When editing existing files, prefer minimal diffs and avoid unrelated cleanup.
 - When modifying an existing file, change only the necessary parts and keep surrounding context small but sufficient.

@@ -41,7 +41,6 @@ All of these fire automatically when the situation matches, except
 | `git` | The `SessionStart` hook pulls this repo before each session | yes, exits if missing |
 | `jq` | Edits `~/.claude/settings.json` to wire that hook | yes, exits if missing |
 | [superpowers](https://github.com/obra/superpowers) | `feature-development` delegates its stages to `superpowers:brainstorming`, `writing-plans`, `subagent-driven-development` and `finishing-a-development-branch` | no |
-| intellij-index MCP | Optional. The guidance prefers its symbol lookup and rename tools over text search; without it, Claude falls back to `rg` | no |
 
 The installer checks only `git` and `jq`, and exits without changing anything
 if either is missing. Everything else it assumes.

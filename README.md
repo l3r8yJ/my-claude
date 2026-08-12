@@ -4,7 +4,7 @@ Personal Claude Code setup for Kotlin/Spring and Rust work, installed globally
 rather than per-project: two always-loaded convention files — `CLAUDE.md`
 (Kotlin idioms, testing defaults, jOOQ and Kafka practice, a ban on comments)
 and `RUST.md` (ownership and panic discipline, toolchain policy, the same
-comment ban with one carve-out for public `///` docs) — plus eighteen skills
+comment ban with one carve-out for public `///` docs) — plus nineteen skills
 that load on demand.
 
 `install.sh` symlinks both into `~/.claude/`, so a `git pull` in this clone
@@ -24,6 +24,9 @@ Guidance too narrow or example-heavy to keep loaded every session lives in
 | `jooq-repository-pattern` | Writing or reviewing a jOOQ repository on `jooq-starter`, or configuring `jooqCodegen` |
 | `migrating-jpa-to-jooq-starter` | Replacing a JPA `@Entity`/`JpaRepository` with a jOOQ one, or debugging the failures that migration causes |
 | `nextbi-analytics-contracts` | Working in the NextBI analytics contracts repo — OpenAPI or Kafka contracts, codegen, versioning |
+| `rest-api-conventions` | Designing or reviewing an HTTP API — naming operations, list envelopes, bulk reads, JSON field case |
+| `rest-api-conventions` | Designing or reviewing an HTTP API — naming operations, list envelopes, bulk reads, JSON field case |
+| `rest-api-conventions` | Designing or reviewing an HTTP API — non-CRUD operations, list envelopes, bulk reads, JSON field case |
 | `feature-development` | Building a new feature in a Kotlin/Spring service, from description to merged branch |
 
 ### Rust
@@ -66,7 +69,7 @@ if either is missing. Everything else it assumes.
 
 ### superpowers
 
-The other seventeen skills stand alone. `feature-development` does not — it is a
+The other eighteen skills stand alone. `feature-development` does not — it is a
 wrapper that hands each stage to a superpowers skill, so without the plugin
 installed it stalls at stage 2. Install it in Claude Code with:
 

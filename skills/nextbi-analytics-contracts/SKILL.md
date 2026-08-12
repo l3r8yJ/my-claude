@@ -1,6 +1,6 @@
 ---
 name: nextbi-analytics-contracts
-description: Use when working in the NextBI analytics contracts repo — adding or editing an OpenAPI REST spec or a Kafka message contract, understanding contract versioning/publishing, fixing Spectral/oasdiff/markdownlint failures, or wiring a generated contract JAR into a service. Covers repo layout, artifact coordinates, the auto-versioning hook, naming conventions, and doc-vs-reality gotchas.
+description: Use when working in the NextBI analytics contracts repo — editing an `openapi.yaml` or a Kafka `<topic>.yaml`, a `$ref` or a `components.schemas` entry, `info.version` and `release/X.Y.x` branches, a failing Spectral, oasdiff or markdownlint check, running `./gradlew assemble`, or wiring a generated contract JAR (`contracts.version`, the generated `Dto` types) into a consuming service.
 ---
 
 # NextBI Analytics Contracts

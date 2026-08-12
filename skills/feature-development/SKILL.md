@@ -1,6 +1,6 @@
 ---
 name: feature-development
-description: Use when building a new feature in a Kotlin/Spring service from a description — drives the whole path from brief to merged branch through interrogation, design, plan, build, review and retrospective, with four hard human gates. Supersedes bare superpowers:brainstorming for feature work. Not for bug fixes, pure refactors, or one-line config edits.
+description: Use when building a whole new feature in a Kotlin/Spring service from a description, ticket or brief — work that earns its own branch and merge request. Heavyweight, with four hard human approval gates, so it is worth declining for anything smaller. Not for bug fixes, pure refactors, a single endpoint or field, or one-line config edits. Supersedes bare `superpowers:brainstorming` for feature work.
 ---
 
 # Feature Development

@@ -1,6 +1,6 @@
 ---
 name: rust-error-handling
-description: Use when designing or reviewing error types in Rust - choosing thiserror vs anyhow, deciding what a public API returns, adding context to a `?`, handling partial failure, or when a signature returns `Box<dyn Error>`, `String`, or `Option` where a typed error belongs.
+description: Use when designing or reviewing Rust error types — `thiserror` versus `anyhow`, what a `pub fn` should return, `#[from]` and `#[non_exhaustive]`, adding context to a `?`, an `unwrap()` or `expect()` in production code, partial failure across a collection, mapping errors at an HTTP boundary — and whenever a signature returns `Box<dyn Error>`, a `String`, or a bare `Option` where a typed error belongs.
 ---
 
 # Rust Error Handling

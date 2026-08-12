@@ -1,6 +1,6 @@
 ---
 name: jooq-repository-pattern
-description: Use when writing or reviewing a jOOQ repository in a Spring Boot service built on `jooq-starter` (`org.dema.jooq.AbstractRepository`) — one repository per table, soft-delete via baseCondition, keeping DSLContext out of services, audit timestamps, Spring Data Page/Pageable results — or when configuring or debugging `jooqCodegen` generation from Liquibase migrations.
+description: Use when writing or reviewing a jOOQ repository on `jooq-starter` — `AbstractRepository`, `DSLContext` leaking into a service, `getOneBy`/`getAllBy`/`deleteBy`, soft-delete through `baseCondition`, `insertOnConflictDoNothing`, `JooqUtils.paginate` and `Page`/`Pageable`, `TimestampsRecordListener` audit columns, `@Transactional` boundaries, or a query issued per row — and when configuring `jooqCodegen` against Liquibase migrations via Testcontainers.
 ---
 
 # jOOQ Repository Pattern (`jooq-starter`)

@@ -1,6 +1,6 @@
 ---
 name: verifying-library-behavior
-description: Use when a claim about runtime behavior is load-bearing for correctness and is being inferred from documentation, annotations, a method name, or a run of passing attempts rather than observed — before writing a commit message, error string, or test name that asserts a mechanism.
+description: Use when about to state how something behaves — in a commit message, an error string, a test name, an MR description — on the strength of documentation, an annotation, a method name, or a handful of passing runs rather than something actually observed, and when a reviewer asks whether you are sure it does that. Covers `javap -p` on the jar, probing a running service, and reading the generated sources.
 ---
 
 # Verifying Library Behavior

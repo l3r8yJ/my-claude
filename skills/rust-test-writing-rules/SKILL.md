@@ -1,6 +1,6 @@
 ---
 name: rust-test-writing-rules
-description: Use when writing or reviewing Rust tests - unit vs integration placement, naming, assertions, fixtures, async tests, testcontainers, controlling time, property tests, snapshot tests, and what not to mock.
+description: Use when writing or reviewing Rust tests — `#[cfg(test)] mod tests` beside the code versus `tests/`, naming, `assert_that!` from `asserting` rather than `assert_eq!`, `rstest` cases, `#[tokio::test]`, `tokio::time::pause()` in place of a `sleep`, testcontainers, `wiremock`, property and snapshot tests, and what must never be mocked.
 ---
 
 # Rust Test Writing Rules

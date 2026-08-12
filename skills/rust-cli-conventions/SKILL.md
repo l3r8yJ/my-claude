@@ -1,6 +1,6 @@
 ---
 name: rust-cli-conventions
-description: Use when building or reviewing a Rust command-line tool - clap structure, exit codes, stdout vs stderr discipline, piping and TTY detection, colour, progress and verbosity, config precedence, signal handling, testing a binary, and distribution.
+description: Use when building or reviewing a Rust command-line tool — `clap` with `#[derive(Parser)]`, subcommands and flags, exit codes, what belongs on stdout versus stderr, `--json`, `--dry-run` and `--force`, TTY detection and `NO_COLOR`, progress and verbosity, config precedence, Ctrl-C and signals, testing the binary, and shipping it.
 ---
 
 # Rust CLI Conventions

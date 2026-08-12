@@ -1,6 +1,6 @@
 ---
 name: kotlin-test-writing-rules
-description: Use when writing or reviewing Kotlin JUnit5 test classes - jtcop rule conventions (assertion style, naming, fake objects, ITCase layout).
+description: Use when writing, naming or reviewing a Kotlin JUnit 5 test — `@Test`, `assertThat` and assertk, `spring-mockk`, `@ServiceConnection`, Testcontainers, an `ITCase` integration test, or fake objects for shared setup — and when a test has no assertion, an assertion with no descriptive name, a name that reads as a method name rather than a sentence, or non-test members in a test class. Covers the jtcop rule set.
 ---
 
 # Kotlin Test Writing Rules

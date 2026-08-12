@@ -1,6 +1,6 @@
 ---
 name: reviewing-a-blocking-wait
-description: Use when writing or reviewing a loop that polls for a condition with a sleep in its body — a wait for a remote job, a status poll, a retry loop — including one encountered while reading someone else's diff.
+description: Use when writing or reviewing a loop that waits for something — a `Thread.sleep` or `delay()` inside a `while` or `do-while` polling a status, a wait on a remote job, a retry loop — including one met while reading someone else's diff. Covers the missing timeout, the swallowed `InterruptedException`, shutdown through `@PreDestroy` and `join()`, and testing the wait without sleeping in the test.
 ---
 
 # Reviewing a Blocking Wait

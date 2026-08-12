@@ -1,6 +1,6 @@
 ---
 name: reviewing-across-task-seams
-description: Use when reviewing a branch of several commits whose individual tasks were already reviewed — a whole-branch or pre-merge review that must find defects living between task scopes rather than re-checking each diff.
+description: Use when reviewing a whole branch or a merge request whose commits or tasks were each already reviewed on their own — a pre-merge or final pass, which has to hunt a value produced by one task and consumed by another, a file layered by three tasks in sequence, the one file of N that drifted from a mechanical change, and mechanisms asserted in commit messages that no single task verified.
 ---
 
 # Reviewing Across Task Seams

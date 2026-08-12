@@ -1,6 +1,6 @@
 ---
 name: driving-gitlab-ci-with-glab
-description: Use when working with GitLab CI from the terminal through glab — locating the pipeline for a commit that was just pushed, checking whether a stage passed, or triggering a manual job such as a deploy — and whenever a pipeline for a known-good push appears to be missing.
+description: Use when running `glab` against GitLab CI — `glab ci status`, `list`, `trace`, finding the pipeline for a commit just pushed, checking whether a stage passed, reading a failed job's log, or triggering a manual deploy job — and when a push that should have run CI shows no pipeline at all, or `glab` reports a different branch's run than the one you pushed.
 ---
 
 # Driving GitLab CI with glab

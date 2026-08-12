@@ -1,6 +1,6 @@
 ---
 name: rust-sqlx-repository-pattern
-description: Use when writing or reviewing database access in Rust with sqlx (or sea-orm) - repository structure, compile-time checked queries, migrations, transaction boundaries, soft delete, pagination, batching instead of N+1, offline mode in CI, and testing against a real PostgreSQL.
+description: Use when writing or reviewing Rust database access with `sqlx` or sea-orm — `PgPool` setup, `query!` and `query_as!` compile-time checking and the `.sqlx/` offline cache in CI, row types versus domain types, migrations, `Transaction` boundaries, always-on filters like soft delete, pagination, an awaited query inside a `for` loop, and testing against real PostgreSQL through testcontainers.
 ---
 
 # sqlx Repository Pattern

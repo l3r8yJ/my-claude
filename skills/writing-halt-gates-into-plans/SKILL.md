@@ -1,6 +1,6 @@
 ---
 name: writing-halt-gates-into-plans
-description: Use when authoring an implementation plan or task brief where a task rests on a premise the author has not verified — a claim that code is dead, unused, or safe to delete, or any finding derived from a narrow search rather than the full call graph.
+description: Use when authoring an implementation plan, a task brief or a TODO list holding a step that rests on a premise nobody checked — that some code is dead, that nothing calls it, that it is safe to delete, or any finding produced by one narrow grep rather than the full call graph. Writes a step that can stop the task, instead of one that only confirms success afterwards.
 ---
 
 # Writing Halt Gates into Plans

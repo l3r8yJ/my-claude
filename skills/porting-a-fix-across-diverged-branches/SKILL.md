@@ -1,6 +1,6 @@
 ---
 name: porting-a-fix-across-diverged-branches
-description: Use when moving a commit or a branch's work onto another branch that may have drifted — before running cherry-pick — and when a cherry-pick has already failed with modify/delete conflicts or conflicts across a restructured package layout.
+description: Use before or during a `git cherry-pick` onto a branch that has drifted — establishing the real merge base, checking with `git cherry` whether the fix already landed — and when one has already failed with `CONFLICT (modify/delete)`, conflicts across a moved or renamed package layout, or a state you need to `--abort` and retry differently.
 ---
 
 # Porting a Fix Across Diverged Branches

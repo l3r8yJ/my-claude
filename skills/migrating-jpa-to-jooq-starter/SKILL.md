@@ -1,6 +1,6 @@
 ---
 name: migrating-jpa-to-jooq-starter
-description: Use when migrating a Spring Data JPA `@Entity`/`JpaRepository` to jOOQ's `org.dema.jooq.AbstractRepository` (the `io.github.denis-markushin:jooq-starter` library), or when debugging `UninitializedPropertyAccessException: lateinit property dsl` from a jOOQ repository, or a `PRIMARY KEY`/unique-constraint violation from a jOOQ `save()` that used to work fine as a JPA `.save()`.
+description: Use when hitting `UninitializedPropertyAccessException` on `lateinit property dsl`, a `PRIMARY KEY` or unique-constraint violation from a jOOQ `save()`/`store()` that worked fine as a JPA `.save()`, an `Integer` vs `Long` mismatch between a generated jOOQ record and an entity's `@Column`, or a table with no primary key — and when migrating a Spring Data JPA `@Entity`/`JpaRepository` to jOOQ's `org.dema.jooq.AbstractRepository` (`io.github.denis-markushin:jooq-starter`) in the first place.
 ---
 
 # Migrating from Spring Data JPA to jOOQ (`jooq-starter`)

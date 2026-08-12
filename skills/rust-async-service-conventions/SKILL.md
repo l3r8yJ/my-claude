@@ -1,6 +1,6 @@
 ---
 name: rust-async-service-conventions
-description: Use when building or reviewing an async Rust service on tokio and axum - state and dependency injection, extractors, tower middleware, tracing setup, graceful shutdown, timeouts and retries, blocking work, cancellation safety, config, and health probes.
+description: Use when building or reviewing an async Rust service on tokio and axum — a `Router`, handlers and extractors, `Arc` application state, `tower` middleware order through `.layer()`, `tracing` spans and structured fields, graceful shutdown, `tokio::spawn` background tasks, `spawn_blocking`, `reqwest::Client` timeouts and retries, `/health` probes, or a `std::sync::Mutex` guard held across an `.await`.
 ---
 
 # Async Service Conventions (tokio + axum)

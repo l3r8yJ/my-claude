@@ -1,6 +1,6 @@
 ---
 name: mapstruct-converter-conventions
-description: Use when writing a Spring Converter, a MapStruct mapper, or calling ConversionService - naming, shared @MapperConfig, and multi-input conversion conventions.
+description: Use when writing or reviewing a Spring `Converter<S, T>`, a MapStruct `@Mapper` or `@MapperConfig`, or a call to `ConversionService.convert()` — covers naming, shared mapper config, `@Qualifier("mvcConversionService")`, and converting from more than one input via a generic `Source<S, A>` instead of a one-off source class per converter.
 ---
 
 # Converter Beans and ConversionService

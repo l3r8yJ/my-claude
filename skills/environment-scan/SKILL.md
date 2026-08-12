@@ -1,6 +1,6 @@
 ---
 name: environment-scan
-description: Use when the user explicitly asks to scan or inventory their machine, environment, or installed CLI tooling — probes the box, proposes the findings that would change Claude's behavior, and on approval records them to a machine-local rule file. Explicit invocation only, never automatic.
+description: Use when the user explicitly asks to scan, inventory or re-scan their machine, environment, shell or installed CLI tooling, and records what it finds to `~/.claude/rules/environment.md`. Explicit invocation only — never automatically, and never as background research for some other task.
 ---
 
 # Environment Scan

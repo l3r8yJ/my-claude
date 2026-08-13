@@ -233,6 +233,76 @@ Configure it globally — `PropertyNamingStrategies.SNAKE_CASE` — never per-DT
 with `@JsonProperty`. The rule matters less than having one: pick this, and the
 drift between an endpoint written today and one written in March disappears.
 
+## 5. `/v1` is the whole prefix
+
+Not `/api/v1`. The `api` segment carries no information — every path in the
+service is an API, and a segment that is constant across every route is a
+segment that distinguishes nothing. Version first, collection second:
+`/v1/pets:list`.
+
+This is the one rule an existing service most often violates on the way in.
+When extending a service already serving `/api/v1/...`, do not mix: either the
+new endpoints join the old prefix and a migration is scheduled, or the prefix
+moves wholesale. Two prefixes for one API is worse than either choice, and
+"we'll unify later" is how a service ends up with three.
+
+## 6. Status is two surfaces, never one
+
+Every service eventually grows a request for "one place to see what's going
+on", and it arrives as one endpoint. It is two, with **one source of truth
+underneath**:
+
+```
+StatusSnapshotService            ← reads the cheap sources once
+    ├── POST /v1/statuses:list   → product: stages, counters, detail
+    └── HealthContributor(s)     → /actuator/health: UP/DOWN only
+```
+
+Both surfaces read the same state, so they cannot disagree — the failure this
+prevents is a dashboard and a monitor telling on-call two different stories.
+
+**The health vocabulary answers a different question.** `UP`, `DOWN`,
+`OUT_OF_SERVICE`, `UNKNOWN` mean *is the service working*, not *what is it
+doing*. A failed backup from last night is `UP`: the service is fine, a job
+was not. Map a business failure to `DOWN` and the orchestrator restarts the
+pod and the probe pulls the instance out of rotation over something that never
+touched its health. Business stages live in the product surface; health carries
+liveness of dependencies and nothing else.
+
+**Health carries no detail.** Actuator is routinely exposed with weaker
+authentication than the API — sometimes none. File paths, backup names, error
+text and logs belong in the authenticated product response, never in a health
+component.
+
+**The product surface is an ordinary collection.** `statuses` has listable
+elements with stable ids, so it gets the standard verbs and the standard
+envelope — `POST /v1/statuses:list` and `POST /v1/statuses:by-id`, no special
+shape. Give each element the same fields: `id`, `stage` from one service-wide
+enum, `native_status` (the component's own value, `null` for aggregates),
+`changed_at` — *when the stage changed*, not when it was read, or the client
+cannot show "running for 12 minutes" — and a free-form `detail` object for
+display only. Clients branch on `stage`; `detail` is for humans.
+
+**One stage vocabulary, mapped, not replaced.** A service that has grown
+several lifecycles has several words for one thing — `IN_PROCESS`,
+`IN_PROGRESS`, `INSTALLING` all mean running. Fold them into one enum
+(`IDLE` / `RUNNING` / `SUCCEEDED` / `FAILED` / `CANCELLED` / `PAUSED`) and
+return the original alongside it. Keeping `native_status` is what makes the
+unification non-breaking: a client that needs the distinction still has it,
+existing endpoints stay untouched, and nothing has to be migrated first.
+
+**A snapshot holds cheap reads only.** Anything that opens a socket — a
+connectivity check, a probe of another service — is an *action* a user
+triggers, not state to be collected. Put one in the snapshot and it answers in
+seconds, flaps whenever any dependency is slow, and degrades the whole response
+over one component.
+
+**A snapshot pairs with push, it does not replace it.** SSE and websockets tell
+a *connected* client what changed and have no replay; the snapshot answers the
+first page load and every reconnect. Deleting the pull endpoint because "events
+cover it" loses exactly the window where the client was not listening —
+including the case where the service itself restarted.
+
 ## Quick reference
 
 | Operation | Call | Body |
@@ -245,6 +315,7 @@ drift between an endpoint written today and one written in March disappears.
 | Domain action | `POST /v1/orders:cancel` | `{"order_id": …, "reason": …}` |
 | Slow job | `POST /v1/pets:reindex` | → `202` + operation id |
 | Child collection | `POST /v1/pet-photos:list` | `{"pet_id": …}` |
+| What is going on | `POST /v1/statuses:list` | stages + `detail`; health stays in actuator |
 
 ## Common mistakes
 
@@ -262,6 +333,11 @@ drift between an endpoint written today and one written in March disappears.
 | `:delete` used for a terminal state that stays readable | A domain verb — `:retire`, `:archive`, `:close` |
 | `201` from a create that takes minutes | `202` and an operation id; the job rule beats the create rule |
 | No validation on a body-carried id | `@field:NotBlank` — nothing rejected it upstream |
+| `POST /api/v1/pets:list` | `/v1/pets:list` — `api` distinguishes nothing |
+| A business failure mapped to health `DOWN` | `UP` with a `FAILED` stage in the product surface |
+| Backup names, paths or logs in `/actuator/health` | Detail belongs in the authenticated response |
+| A network probe collected into a status snapshot | It is an action the user triggers, not state |
+| Pull status endpoint deleted because "SSE covers it" | Push has no replay; the snapshot serves reconnects |
 
 ## Sources
 

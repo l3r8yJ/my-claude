@@ -173,6 +173,19 @@ caller gets*, it is a regular comment wearing three slashes — delete it.
 
 ## Testing defaults
 
+- **Assert with [`asserting`](https://crates.io/crates/asserting), not the
+  `std` macros.** `use asserting::prelude::*;` then
+  `assert_that!(actual).is_equal_to(expected)`. It carries the subject and the
+  expectation into the failure message on its own, so a failing test reads
+  without re-running it — which is the whole reason the `std` macros needed a
+  hand-written message argument. Reach for its vocabulary rather than
+  reformulating: `is_greater_than`, `has_value`, `is_none`, `contains`,
+  `starts_with`, `contains_exactly`, `contains_all_of`. Chain instead of
+  writing several asserts over one subject. Where the expression alone does not
+  say what the subject is, name it: `assert_that!(x).named("unlocked codes")`.
+  Use `verify_that!` when a test must collect several failures instead of
+  stopping at the first. Keep `assert!`/`assert_eq!` only in `build.rs` and in
+  doctests, where a dev-dependency is not in scope.
 - Unit tests live in a `#[cfg(test)] mod tests` beside the code; integration
   tests live in `tests/` and may only use the crate's public API. That split
   is a design signal — if a behavior is unreachable from `tests/`, ask

@@ -1,6 +1,6 @@
 # Shared engineering guidance for Kotlin projects
 
-This repo also ships fourteen on-demand skills — `kotlin-test-writing-rules`, `mapstruct-converter-conventions`, `jooq-repository-pattern`, `migrating-jpa-to-jooq-starter`, `nextbi-analytics-contracts`, `rest-api-conventions`, `verifying-library-behavior`, `writing-halt-gates-into-plans`, `reviewing-across-task-seams`, `feature-development`, `environment-scan`, `driving-gitlab-ci-with-glab`, `porting-a-fix-across-diverged-branches`, and `reviewing-a-blocking-wait` — for guidance too narrow or example-heavy to keep loaded every session. Claude applies them automatically when relevant.
+This repo also ships fifteen on-demand skills — `kotlin-test-writing-rules`, `mapstruct-converter-conventions`, `jooq-repository-pattern`, `migrating-jpa-to-jooq-starter`, `nextbi-analytics-contracts`, `rest-api-conventions`, `verifying-library-behavior`, `writing-halt-gates-into-plans`, `reviewing-across-task-seams`, `feature-development`, `environment-scan`, `driving-gitlab-with-glab`, `porting-a-fix-across-diverged-branches`, `reviewing-a-blocking-wait`, and `driving-nextbi-jira-with-jira-cli` — for guidance too narrow or example-heavy to keep loaded every session. Claude applies them automatically when relevant.
 
 IMPORTANT:
 

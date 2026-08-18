@@ -4,7 +4,7 @@ Personal Claude Code setup for Kotlin/Spring and Rust work, installed globally
 rather than per-project: two always-loaded convention files — `CLAUDE.md`
 (Kotlin idioms, testing defaults, jOOQ and Kafka practice, a ban on comments)
 and `RUST.md` (ownership and panic discipline, toolchain policy, the same
-comment ban with one carve-out for public `///` docs) — plus nineteen skills
+comment ban with one carve-out for public `///` docs) — plus twenty skills
 that load on demand.
 
 `install.sh` symlinks both into `~/.claude/`, so a `git pull` in this clone
@@ -46,7 +46,7 @@ Guidance too narrow or example-heavy to keep loaded every session lives in
 | `verifying-library-behavior` | A load-bearing claim about runtime behavior — a library, a running service, or concurrent code — is inferred rather than observed |
 | `writing-halt-gates-into-plans` | Authoring a plan whose task rests on an unverified premise — "this code is dead", "this is safe to delete" |
 | `reviewing-across-task-seams` | Reviewing a whole branch whose individual commits were already reviewed |
-| `driving-gitlab-ci-with-glab` | Finding the pipeline for a pushed commit, checking a stage, triggering a manual job through `glab`, or a pipeline for a known-good push appearing to be missing |
+| `driving-gitlab-with-glab` | Driving `glab` for merge requests, issues, CI pipelines and jobs, releases, or raw `glab api` — including targeting the right host, keying a pipeline by SHA, and triggering a manual deploy |
 | `porting-a-fix-across-diverged-branches` | Moving commits onto a branch whose layout has drifted, or a cherry-pick that failed with `modify/delete` |
 | `reviewing-a-blocking-wait` | A poll loop with a sleep in its body, being written or read in a diff |
 | `environment-scan` | **Explicit ask only** — "scan my environment", "what tooling do I have" |
@@ -69,7 +69,7 @@ if either is missing. Everything else it assumes.
 
 ### superpowers
 
-The other eighteen skills stand alone. `feature-development` does not — it is a
+The other nineteen skills stand alone. `feature-development` does not — it is a
 wrapper that hands each stage to a superpowers skill, so without the plugin
 installed it stalls at stage 2. Install it in Claude Code with:
 

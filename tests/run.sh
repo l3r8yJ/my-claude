@@ -348,7 +348,73 @@ test_scan_script_runs() {
   not_contains "${out}" "BEGIN OPENSSH PRIVATE KEY" "scan must never emit key material"
 }
 
+test_codex_install_preserves_settings_and_is_repeatable() {
+  local home before instructions skill_src skill_name
+  home="$(fake_home)"
+  mkdir -p "${home}/.codex" "${home}/.agents/skills/rust-error-handling"
+  printf 'My instructions' > "${home}/.codex/AGENTS.md"
+  printf 'model = "existing-model"\n' > "${home}/.codex/config.toml"
+  printf 'My skill\n' > "${home}/.agents/skills/rust-error-handling/SKILL.md"
+  printf '%s\n' '{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"echo existing"}]}]},"description":"mine"}' > "${home}/.codex/hooks.json"
+  HOME="${home}" CODEX_HOME="${home}/.codex" bash "${REPO_DIR}/install.sh" --codex >/dev/null 2>&1
+  assert_eq "$?" "0" "Codex installation should succeed"
+  before="$(cat "${home}/.codex/AGENTS.md" "${home}/.codex/hooks.json")"
+  HOME="${home}" CODEX_HOME="${home}/.codex" bash "${REPO_DIR}/install.sh" --codex >/dev/null 2>&1
+  assert_eq "$?" "0" "Codex reinstallation should succeed"
+  assert_eq "$(cat "${home}/.codex/AGENTS.md" "${home}/.codex/hooks.json")" "${before}" "Codex reinstallation must not duplicate guidance or hooks"
+  instructions="$(cat "${home}/.codex/AGENTS.md")"
+  contains "${instructions}" $'My instructions\nAt the start' "existing instructions without a trailing newline must survive"
+  contains "${instructions}" "${REPO_DIR}/CLAUDE.md" "Codex must read shared Kotlin guidance"
+  contains "${instructions}" "${REPO_DIR}/RUST.md" "Codex must read shared Rust guidance"
+  contains "${instructions}" "${REPO_DIR}/AGENTS.md" "Codex must read its compatibility instructions"
+  assert_eq "$(cat "${home}/.codex/config.toml")" 'model = "existing-model"' "Codex configuration must stay unchanged"
+  assert_eq "$(cat "${home}/.agents/skills/rust-error-handling/SKILL.md")" "My skill" "existing Codex skills must survive"
+  assert_eq "$(jq -r '.description' "${home}/.codex/hooks.json")" "mine" "hook metadata must survive"
+  assert_eq "$(jq '[.hooks.SessionStart[].hooks[]] | length' "${home}/.codex/hooks.json")" "2" "existing Codex hooks must survive"
+  for skill_src in "${REPO_DIR}"/skills/*/; do
+    skill_name="$(basename "${skill_src}")"
+    [ "${skill_name}" = "rust-error-handling" ] && continue
+    assert_eq "$(readlink "${home}/.agents/skills/${skill_name}")" "${REPO_DIR}/skills/${skill_name}" "Codex skill ${skill_name} must point at its source"
+  done
+  no "[ -e '${home}/.claude/settings.json' ]" "Codex-only install must not configure Claude"
+  rm -rf "${home}"
+}
+
+test_codex_custom_home_and_both_agents() {
+  local home
+  home="$(fake_home)"
+  HOME="${home}" CODEX_HOME="${home}/custom codex" bash "${REPO_DIR}/install.sh" --both >/dev/null 2>&1
+  assert_eq "$?" "0" "installing both agents should succeed"
+  ok "[ -f '${home}/custom codex/AGENTS.md' ]" "Codex must honor CODEX_HOME"
+  ok "[ -f '${home}/custom codex/hooks.json' ]" "Codex hooks must honor CODEX_HOME"
+  ok "[ -f '${home}/.claude/settings.json' ]" "both mode must configure Claude too"
+  no "[ -e '${home}/.codex' ]" "custom CODEX_HOME must not create the default directory"
+  rm -rf "${home}"
+}
+
+test_codex_rejects_unsafe_existing_files() {
+  local home content
+  home="$(fake_home)"
+  mkdir -p "${home}/.codex"
+  printf 'External instructions\n' > "${home}/external.md"
+  ln -s "${home}/external.md" "${home}/.codex/AGENTS.md"
+  HOME="${home}" CODEX_HOME="${home}/.codex" bash "${REPO_DIR}/install.sh" --codex >/dev/null 2>&1
+  assert_eq "$?" "1" "Codex must refuse to append through an AGENTS.md symlink"
+  assert_eq "$(cat "${home}/external.md")" "External instructions" "symlink targets must stay unchanged"
+  rm "${home}/.codex/AGENTS.md"
+  for content in '{"hooks":{"SessionStart":"oops"}}' 'invalid JSON'; do
+    printf '%s' "${content}" > "${home}/.codex/hooks.json"
+    HOME="${home}" CODEX_HOME="${home}/.codex" bash "${REPO_DIR}/install.sh" --codex >/dev/null 2>&1
+    assert_eq "$?" "1" "Codex must reject malformed hooks"
+    assert_eq "$(cat "${home}/.codex/hooks.json")" "${content}" "invalid hook configuration must remain untouched"
+  done
+  rm -rf "${home}"
+}
+
 main() {
+  test_codex_install_preserves_settings_and_is_repeatable
+  test_codex_custom_home_and_both_agents
+  test_codex_rejects_unsafe_existing_files
   test_preflight_requires_jq
   test_hook_warns_on_pull_failure
   test_hook_replaces_older_entry

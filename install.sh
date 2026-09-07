@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-# Links this repo's guidance into ~/.claude/rules/ and its skills into
-# ~/.claude/skills/, then wires a SessionStart hook that pulls the latest
-# version of this repo before each Claude Code session. Never overwrites a
-# file it did not create.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET="${1:---claude}"
+case "${TARGET}" in
+  --claude|--codex) ;;
+  --both)
+    bash "${REPO_DIR}/install.sh" --claude
+    exec bash "${REPO_DIR}/install.sh" --codex
+    ;;
+  *) echo "Usage: $0 [--claude|--codex|--both]" >&2; exit 1 ;;
+esac
 CLAUDE_DIR="${HOME}/.claude"
 CLAUDE_MD="${CLAUDE_DIR}/CLAUDE.md"
 RULES_DIR="${CLAUDE_DIR}/rules"
@@ -13,6 +18,13 @@ RULE_FILE="${RULES_DIR}/kotlin-spring.md"
 RUST_RULE_FILE="${RULES_DIR}/rust.md"
 SKILLS_DIR="${CLAUDE_DIR}/skills"
 SETTINGS="${CLAUDE_DIR}/settings.json"
+if [ "${TARGET}" = "--codex" ]; then
+  CLAUDE_DIR="${CODEX_HOME:-${HOME}/.codex}"
+  CLAUDE_MD="${CLAUDE_DIR}/AGENTS.md"
+  RULES_DIR="${CLAUDE_DIR}"
+  SKILLS_DIR="${HOME}/.agents/skills"
+  SETTINGS="${CLAUDE_DIR}/hooks.json"
+fi
 PULL_CMD="git -C \"${REPO_DIR}\" pull --ff-only --quiet || echo \"my-claude: update failed (local commits or no network); guidance may be stale — check: git -C ${REPO_DIR} status\""
 
 for tool in git jq; do
@@ -30,7 +42,6 @@ symlink_points_to() {
   [ -L "$1" ] && [ "$(readlink "$1")" = "$2" ]
 }
 
-# append_import IMPORT_LINE
 append_import() {
   local line="$1"
   if [ -f "${CLAUDE_MD}" ] && grep -qxF "${line}" "${CLAUDE_MD}"; then
@@ -44,7 +55,6 @@ append_import() {
   echo "Added import to ${CLAUDE_MD}: ${line}"
 }
 
-# attach_guidance SOURCE_FILE RULE_FILE
 attach_guidance() {
   local source="$1" rule="$2"
   if symlink_points_to "${rule}" "${source}"; then
@@ -63,13 +73,21 @@ attach_guidance() {
   append_import "@${source}"
 }
 
-if symlink_points_to "${CLAUDE_MD}" "${REPO_DIR}/CLAUDE.md"; then
+if [ "${TARGET}" = "--codex" ]; then
+  if [ -L "${CLAUDE_MD}" ]; then
+    echo "error: ${CLAUDE_MD} is a symlink; refusing to modify its target. Merge the guidance from ${REPO_DIR}/AGENTS.md manually." >&2
+    exit 1
+  fi
+  append_import "At the start of every session, read and follow the shared engineering guidance in ${REPO_DIR}/CLAUDE.md and ${REPO_DIR}/RUST.md, then the Codex compatibility instructions in ${REPO_DIR}/AGENTS.md."
+elif symlink_points_to "${CLAUDE_MD}" "${REPO_DIR}/CLAUDE.md"; then
   rm "${CLAUDE_MD}"
   echo "Removed legacy symlink ${CLAUDE_MD}; guidance now loads from ${RULE_FILE}"
 fi
 
-attach_guidance "${REPO_DIR}/CLAUDE.md" "${RULE_FILE}"
-attach_guidance "${REPO_DIR}/RUST.md" "${RUST_RULE_FILE}"
+if [ "${TARGET}" = "--claude" ]; then
+  attach_guidance "${REPO_DIR}/CLAUDE.md" "${RULE_FILE}"
+  attach_guidance "${REPO_DIR}/RUST.md" "${RUST_RULE_FILE}"
+fi
 
 mkdir -p "${SKILLS_DIR}"
 
@@ -115,3 +133,6 @@ if ! jq --arg repo "${REPO_DIR}" --arg cmd "${PULL_CMD}" '
 fi
 mv "${tmp}" "${SETTINGS}"
 echo "Wired SessionStart pull hook in ${SETTINGS}"
+if [ "${TARGET}" = "--codex" ]; then
+  echo "Start a new Codex session to load the skills and guidance. Approve the startup hook if Codex requests trust."
+fi

@@ -7,10 +7,10 @@ narrow or example-heavy to keep loaded every session. Claude applies them
 automatically when relevant.
 
 The comment ban, the unused-code ban, the Conventional Commits format with a
-ticket scope, the ban on committing brainstorming artifacts, and the response
-style for engineering tasks are stated in the Kotlin guidance but are not
-about Kotlin. They apply here unchanged. The rest of this file is what Rust
-changes.
+ticket scope, the ban on committing brainstorming artifacts, the one-level-
+of-abstraction-per-function rule, and the response style for engineering
+tasks are stated in the Kotlin guidance but are not about Kotlin. They apply
+here unchanged. The rest of this file is what Rust changes.
 
 IMPORTANT:
 

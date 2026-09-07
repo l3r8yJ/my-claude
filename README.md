@@ -1,13 +1,13 @@
 # my-claude
 
-Personal Claude Code setup for Kotlin/Spring and Rust work, installed globally
+Personal Claude Code and Codex setup for Kotlin/Spring and Rust work, installed globally
 rather than per-project: two always-loaded convention files — `CLAUDE.md`
 (Kotlin idioms, testing defaults, jOOQ and Kafka practice, a ban on comments)
 and `RUST.md` (ownership and panic discipline, toolchain policy, the same
 comment ban with one carve-out for public `///` docs) — plus twenty skills
 that load on demand.
 
-`install.sh` symlinks both into `~/.claude/`, so a `git pull` in this clone
+`install.sh` links the guidance and skills for the selected agent, so a `git pull` in this clone
 updates every project at once. A `SessionStart` hook does that pull for you.
 
 ## Skills
@@ -58,10 +58,10 @@ All of these fire automatically when the situation matches, except
 
 | What | Why | Checked by installer |
 | --- | --- | --- |
-| [Claude Code](https://github.com/anthropics/claude-code) | Reads `~/.claude/rules/` and `~/.claude/skills/`; nothing here does anything without it | no |
+| Claude Code or Codex | Loads the shared guidance and skills through the selected installation | no |
 | `bash` | Runs `install.sh` and `tests/run.sh` | no — it's the interpreter |
 | `git` | The `SessionStart` hook pulls this repo before each session | yes, exits if missing |
-| `jq` | Edits `~/.claude/settings.json` to wire that hook | yes, exits if missing |
+| `jq` | Merges the startup hook into the selected agent's JSON settings | yes, exits if missing |
 | [superpowers](https://github.com/obra/superpowers) | `feature-development` delegates its stages to `superpowers:brainstorming`, `writing-plans`, `subagent-driven-development` and `finishing-a-development-branch` | no |
 
 The installer checks only `git` and `jq`, and exits without changing anything
@@ -111,7 +111,38 @@ If you installed an earlier version that symlinked `~/.claude/CLAUDE.md`
 directly, re-running `./install.sh` removes that symlink and switches you to
 the `rules/` mechanism, so the guidance is not loaded twice.
 
+### Codex
+
+Install only Codex with `./install.sh --codex`, or both agents with
+`./install.sh --both`. No argument keeps the original Claude-only behavior.
+
+The Codex installer appends one instruction to `~/.codex/AGENTS.md` to read
+this clone's `CLAUDE.md`, `RUST.md`, and Codex compatibility instructions.
+It preserves existing instructions and links the same twenty skills into
+`~/.agents/skills/`. Existing skill files and directories are left alone.
+It also merges the startup pull hook into `~/.codex/hooks.json`, preserving
+other hooks. `CODEX_HOME` overrides the `.codex` directory; skills remain
+in `~/.agents/skills/`. Re-running does not duplicate instructions or hooks.
+
+Start a new Codex session after installation and approve the startup hook
+if Codex requests trust. The installer does not bypass hook trust or change
+your model, approval policy, MCP servers, or plugins. Install Superpowers
+separately for Codex before using `feature-development`. Codex reads shared
+guidance via explicit file-reading instructions; Claude's `@` imports and
+automatic `rules/` loading are not used for Codex.
+
 ## Uninstall
+
+### Codex
+
+To uninstall Codex support, remove the single instruction mentioning this
+clone from `$CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`), remove only
+skill symlinks in `~/.agents/skills/` that point into this clone, and remove
+only this clone's startup hook from `$CODEX_HOME/hooks.json`. The guarded
+skill and hook removal commands below also apply with those paths. Remove
+the clone only after uninstalling it from both agents.
+
+### Claude Code
 
 There is no uninstall script — run these steps by hand, in this order. Set
 `REPO` to the path of your clone first:

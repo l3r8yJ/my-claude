@@ -17,6 +17,7 @@ IMPORTANT:
 
 ## General engineering defaults
 
+- **Documented rules and restrictions take precedence over codebase examples, in every language.** Follow the applicable guidance when existing code conflicts with it; an existing pattern is not permission to repeat a violation. Preserve existing style only where it complies with those rules.
 - Prefer simple, readable, and maintainable Kotlin code.
 - Follow DRY, but do not introduce abstractions too early.
 - Prefer the simplest solution that keeps production reliability and performance reasonable.
